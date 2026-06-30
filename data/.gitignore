@@ -1,0 +1,9 @@
+# Ignore all files inside the data subdirectories
+cache/**
+processed/**
+raw/**
+
+# Allow tracking of structural placeholder files
+!cache/.gitkeep
+!processed/.gitkeep
+!raw/.gitkeep
