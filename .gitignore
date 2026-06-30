@@ -36,3 +36,7 @@ coverage.xml
 
 # Logs
 *.log
+
+# Data directories and output assets
+data/output/
+*.db

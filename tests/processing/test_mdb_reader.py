@@ -39,3 +39,14 @@ def test_mdb_reader_read_table() -> None:
     assert "Value" in first_row
     assert isinstance(first_row["CODE"], str)
     assert isinstance(first_row["Value"], str)
+
+
+def test_mdb_reader_primary_keys() -> None:
+    """Verify that MDBReader parses primary keys correctly from the real database."""
+    if not MDB_PATH.exists():
+        pytest.skip("Real HWSD2.mdb database not found.")
+
+    reader = MDBReader(MDB_PATH)
+    assert reader.primary_keys.get("d_wrb2") == "code"
+    assert reader.primary_keys.get("hwsd2_layers") == "id"
+

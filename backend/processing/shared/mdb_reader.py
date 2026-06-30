@@ -27,7 +27,9 @@ class MDBReader:
         self.mdb_path = Path(mdb_path)
         if not self.mdb_path.exists():
             raise FileNotFoundError(f"MDB file not found: {self.mdb_path}")
+        self.primary_keys: dict[str, str] = {}
         self._schema = self._parse_schema()
+
 
     def _parse_schema(self) -> dict[str, dict[str, str]]:
         """Parse database schema dynamically using mdb-schema."""
@@ -57,11 +59,22 @@ class MDBReader:
                         ctype = col_match.group(2).lower()
                         cols[cname] = ctype
                 schema[tname] = cols
+
+            # Parse primary keys
+            pk_regex = (
+                r'ALTER TABLE\s+["\'](\w+)["\']\s+ADD\s+CONSTRAINT\s+["\']\w+["\']\s+'
+                r'PRIMARY\s+KEY\s*\(\s*["\'](\w+)["\']\s*\)\s*;'
+            )
+            pks = re.findall(pk_regex, proc.stdout, re.IGNORECASE)
+            for tname, pk_col in pks:
+                self.primary_keys[tname.lower()] = pk_col.lower()
+
         except Exception as e:
             logger.warning(
                 "Failed to parse database schema: %s. Defaulting to strings.", e
             )
         return schema
+
 
     def list_tables(self) -> list[str]:
         """List all tables available in the MDB database.
@@ -83,7 +96,7 @@ class MDBReader:
             ]
             return tables
         except Exception as e:
-            raise IOError(f"Failed to list tables in MDB: {e}") from e
+            raise OSError(f"Failed to list tables in MDB: {e}") from e
 
     def read_table(self, table_name: str) -> list[dict[str, Any]]:
         """Read a table from the MDB database into memory, preserving datatypes.
@@ -135,7 +148,7 @@ class MDBReader:
 
             proc.wait()
             if proc.returncode != 0:
-                raise IOError(f"mdb-export failed with code {proc.returncode}")
+                raise OSError(f"mdb-export failed with code {proc.returncode}")
             return rows
         except Exception as e:
-            raise IOError(f"Failed to read table '{table_name}': {e}") from e
+            raise OSError(f"Failed to read table '{table_name}': {e}") from e
