@@ -5,6 +5,25 @@ description = "Backend logic for Global Soil Explorer"
 requires-python = ">=3.11"
 dependencies = []
 
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"backend" = "."}
+packages = [
+    "backend.domain",
+    "backend.domain.value_objects",
+    "backend.application",
+    "backend.contracts",
+    "backend.repository",
+    "backend.spatial",
+    "backend.processing",
+    "backend.shared",
+    "backend.config",
+    "backend.interfaces",
+]
+
 [dependency-groups]
 dev = [
     "pytest",
