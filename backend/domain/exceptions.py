@@ -25,3 +25,10 @@ class InvalidProfileError(ValueError):
     """Raised when a SoilProfile violates layer stack or validation invariants."""
     pass
 
+
+class InvalidObservationError(ValueError):
+    """Raised when a SoilObservation violates domain invariants."""
+    pass
+
+
+
