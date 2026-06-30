@@ -4,3 +4,8 @@
 class InvalidCoordinateError(ValueError):
     """Raised when a coordinate violates geographic or type invariants."""
     pass
+
+
+class InvalidPropertyError(ValueError):
+    """Raised when a SoilProperty violates type, unit, or range invariants."""
+    pass

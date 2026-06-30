@@ -1,13 +1,38 @@
 # macOS
 .DS_Store
 
-# Python
-.venv/
+# Python build and distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+
+# Python caches and metadata
 __pycache__/
 *.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# VS Code
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Coverage and testing
+.coverage
+.coverage.*
+htmlcov/
+.cache
+coverage.xml
+*.cover
+
+# IDEs
 .vscode/
+.idea/
 
 # Logs
 *.log
