@@ -18,92 +18,50 @@ This document defines a phased implementation roadmap for the Global Soil Explor
 
 ## Milestones
 
-### 1. Development Environment
+### 1. Environment
 *   **Objective**: Configure the developer workspace, code styling formats, package manager boundaries, and test structure.
 *   **Deliverables**: Project configuration profiles, package dependency files, linter/formatter rules, and initial test directories.
-*   **Dependencies**: None.
 *   **Success Criteria**: Running the validation suite passes successfully with zero formatting, type-checking, or linting errors.
 
-### 2. Backend Skeleton
-*   **Objective**: Establish the backend module structure and dependency boundaries before implementing functionality.
-*   **Deliverables**:
-    *   Module layout
-    *   Interfaces
-    *   Dependency wiring
-    *   Placeholder implementations
-    *   Build configuration
-*   **Dependencies**: Development Environment.
-*   **Success Criteria**: The backend builds successfully with placeholder implementations and respects the approved architecture.
+### 2. Architecture
+*   **Objective**: Define the conceptual system architecture, module structure, and dependency boundaries before implementing functionality.
+*   **Deliverables**: Architecture blueprint documents, design guidelines, and folder structure scaffolding.
+*   **Success Criteria**: Architectural specifications are accepted and frozen.
 
-### 3. Domain Layer
-*   **Objective**: Write the core scientific entities representing soil properties and layers.
-*   **Deliverables**: Conceptual domain classes for profiles, layers, components, and properties.
-*   **Dependencies**: Development Environment.
-*   **Success Criteria**: Automated domain tests verify that vertical layers stack correctly and coordinates range checks pass without exceptions.
+### 3. Domain
+*   **Objective**: Write the core scientific value objects representing soil properties, layers, classifications, profiles, and observations.
+*   **Deliverables**: Fully validated domain objects (`Coordinate`, `SoilProperty`, `SoilClassification`, `SoilLayer`, `SoilProfile`, `SoilObservation`) with comprehensive test suites.
+*   **Success Criteria**: Automated domain tests verify vertical stacking boundaries, ordering, and data type invariants with zero errors.
 
-### 4. Dataset Processing
-*   **Objective**: Build the offline pipeline script to transform raw datasets into normalized tabular structures and optimized grid indexes.
-*   **Deliverables**: Data extraction, transformation, normalization, and verification scripts.
-*   **Dependencies**: Backend Skeleton, raw datasets in `data/raw/hwsd/`.
-*   **Success Criteria**: Preprocessing script runs to completion, creating an optimized database and index repository, with row and cell counts matching raw dataset inventories exactly.
+### 4. Contracts
+*   **Objective**: Define standard abstract interfaces for database repositories and coordinate lookup services.
+*   **Deliverables**: Repository and lookup interface definitions (`SoilObservationRepository`, `SpatialLookupService`) under `contracts`.
+*   **Success Criteria**: Contracts are fully decoupled from storage/raster implementations and type check cleanly.
 
-### 5. Spatial Lookup
-*   **Objective**: Develop the coordinate-to-grid offset converter and pixel index lookup tool.
-*   **Deliverables**: Coordinate coordinate translator and binary raster stream parser.
-*   **Dependencies**: Dataset Processing.
-*   **Success Criteria**: Querying set coordinate benchmarks returns the correct Mapping Unit Keys matching verified dataset indexes.
+### 5. Processing
+*   **Objective**: Build the offline pipeline script to transform raw datasets into normalized SQLite tables and extract binary raster streams.
+*   **Deliverables**: Data extraction, database conversion, validation scripts, and grid extraction scripts.
+*   **Success Criteria**: The offline preprocessing script runs to completion, generating correct query-ready relational databases and extracted raster grids.
 
-### 6. Repository Layer
-*   **Objective**: Develop database query interfaces to pull attribute tables and resolve codes using dictionaries.
-*   **Deliverables**: Database connection handlers, relational query structures, and mapping helpers.
-*   **Dependencies**: Domain Layer, Dataset Processing.
-*   **Success Criteria**: Querying using a valid Mapping Unit Key returns a populated, validated Soil Profile domain object containing fully resolved dictionary text labels.
+### 6. Repository
+*   **Objective**: Develop SQLite repository query handlers and domain mapper logic.
+*   **Deliverables**: Database connection handlers, query builders, and database row-to-domain mapping helpers.
+*   **Success Criteria**: Queries retrieve correct soil profiles and classification dictionaries mapped to validated domain objects.
 
-### 7. Application Services
-*   **Objective**: Develop the request controller services, API routing parameters, and response serialization rules.
-*   **Deliverables**: Request orchestrator service, API routes, data serialization templates, and error mapping rules.
-*   **Dependencies**: Spatial Lookup, Repository Layer.
-*   **Success Criteria**: Mock coordinate queries yield serialized Soil Profile payloads under sub-second processing response times.
+### 7. Spatial Lookup
+*   **Objective**: Implement grid coordinate translations and spatial lookup handlers.
+*   **Deliverables**: Coordinate translators and spatial grid lookup handlers.
+*   **Success Criteria**: Coordinate queries successfully resolve spatial positions to retrieve valid spatial identifiers.
 
-### 8. User Interface Integration
-*   **Objective**: Connect the browser map and charting interface to the runtime query services.
-*   **Deliverables**: Interactive map click trigger, vertical profile charts, and legend panel.
-*   **Dependencies**: Application Services.
-*   **Success Criteria**: Clicking the map successfully converts coordinates, queries the backend service, and renders a vertical soil profile chart and description legends without lag.
+### 8. Application
+*   **Objective**: Implement orchestration services to tie the query pipeline together.
+*   **Deliverables**: Orchestrator service invoking lookup, fetching database attributes, and compiling domain objects.
+*   **Success Criteria**: Integration tests verify end-to-end lookup flow from coordinates to domain models.
 
-### 9. Testing & Validation
-*   **Objective**: Implement full automated coverage for unit, integration, and UI actions.
-*   **Deliverables**: Test suites, coordinate fixtures, database mock environments.
-*   **Dependencies**: User Interface Integration.
-*   **Success Criteria**: Test runners report 100% pass rates for critical coordinates queries, database lookups, and error cases.
-
-### 10. Documentation
-*   **Objective**: Finalize installation scripts, user manuals, and deployment manifests.
-*   **Deliverables**: Setup, workflow, and deployment markdown files.
-*   **Dependencies**: Testing & Validation.
-*   **Success Criteria**: A new developer can set up the workspace, ingest the data, pass tests, and start the system using only the documentation.
-
-### 11. First Public MVP
-*   **Objective**: Deliver a usable, fully integrated client-server application where users can interactively explore global soil datasets.
-*   **Deliverables**: Compiled client package, executable API services, and default local configuration profiles.
-*   **Dependencies**: Documentation, Testing & Validation.
-*   **Success Criteria**: The unified client-server application runs successfully locally, allowing users to query coordinates and instantly view visual soil profiles.
-
----
-
-## Milestone Risks
-
-1.  **Environment Setup**: Package conflicts between developer operating systems.
-2.  **Backend Skeleton**: Incorrect initial module boundary definitions leading to circular references.
-3.  **Domain Layer**: Leaky boundaries causing database schema definitions to influence core domain structures.
-4.  **Dataset Processing**: Missing database extraction drivers for legacy database formats (`.mdb`) on Unix-based development platforms (macOS/Linux).
-5.  **Spatial Lookup**: Slow binary seeking performance when querying raw spatial formats under concurrent user loads.
-6.  **Repository Layer**: Missing keys or orphaned mapping units in the database causing query joins to fail.
-7.  **Application Services**: Serialization performance overhead slowing down API response generation.
-8.  **UI Integration**: Client-side coordinate mapping errors or map rendering lag at high zoom levels.
-9.  **Testing**: Brittle visual tests that break on minor styling changes.
-10. **Documentation**: Outdated setup guidelines due to undocumented environmental configurations.
-11. **First Public MVP**: Local client-server connection conflicts or file permission blocks.
+### 9. Interfaces
+*   **Objective**: Create the web API controllers, request routing protocols, and client map interface dashboards.
+*   **Deliverables**: FastAPI endpoint routes, JSON serialization schemas, visual browser map clicks, and vertical profile charting widgets.
+*   **Success Criteria**: UI clicking maps resolves coordinates and renders vertical soil profile charts in under a second.
 
 ---
 
