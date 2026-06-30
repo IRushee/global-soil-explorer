@@ -19,3 +19,9 @@ class InvalidClassificationError(ValueError):
 class InvalidLayerError(ValueError):
     """Raised when a SoilLayer violates depth range or property invariants."""
     pass
+
+
+class InvalidProfileError(ValueError):
+    """Raised when a SoilProfile violates layer stack or validation invariants."""
+    pass
+

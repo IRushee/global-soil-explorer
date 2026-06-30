@@ -4,6 +4,7 @@ from backend.domain.exceptions import (
     InvalidClassificationError,
     InvalidCoordinateError,
     InvalidLayerError,
+    InvalidProfileError,
     InvalidPropertyError,
 )
 from backend.domain.value_objects import (
@@ -11,6 +12,7 @@ from backend.domain.value_objects import (
     PropertyType,
     SoilClassification,
     SoilLayer,
+    SoilProfile,
     SoilProperty,
     Unit,
 )
@@ -22,8 +24,11 @@ __all__ = [
     "Unit",
     "SoilClassification",
     "SoilLayer",
+    "SoilProfile",
     "InvalidCoordinateError",
     "InvalidPropertyError",
     "InvalidClassificationError",
     "InvalidLayerError",
+    "InvalidProfileError",
 ]
+
