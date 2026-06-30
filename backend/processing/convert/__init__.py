@@ -13,8 +13,20 @@ logger = logging.getLogger(__name__)
 SENTINELS = {-9, -99, -9999, -9.0, -99.0, -9999.0}
 
 
-def clean_value(val: Any) -> Any:
+def clean_value(val: Any, is_prop_col: bool = False) -> Any:
     """Clean sentinel missing-value codes to None (SQL NULL)."""
+    if val is None:
+        return None
+    if is_prop_col:
+        # Physical attributes cannot be negative; negative values are placeholders
+        if isinstance(val, (int, float)) and val < 0:
+            return None
+        if isinstance(val, str):
+            try:
+                if float(val) < 0:
+                    return None
+            except ValueError:
+                pass
     if val in SENTINELS:
         return None
     if isinstance(val, str):
@@ -127,7 +139,21 @@ def _write_database(
             row_vals = []
             for col in columns:
                 val = r[col]
-                cleaned = clean_value(val)
+                is_prop_col = col.upper() in {
+                    "PH_WATER",
+                    "SAND",
+                    "SILT",
+                    "CLAY",
+                    "COARSE",
+                    "BULK",
+                    "ORG_CARBON",
+                    "CEC_SOIL",
+                    "AWC",
+                    "REF_BULK",
+                    "BULK_DENSITY",
+                    "REF_BULK_DENSITY",
+                }
+                cleaned = clean_value(val, is_prop_col)
                 if val is not None and cleaned is None:
                     null_conversions += 1
                 row_vals.append(cleaned)
