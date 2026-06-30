@@ -8,7 +8,7 @@ This document defines the public capabilities of the Global Soil Explorer. It ac
 ---
 
 ## Design Principles
-1.  **Domain-First**: API request schemas and response structures correspond directly to standard soil science concepts rather than underlying database table boundaries.
+1.  **Domain-First**: API request schemas and response structures correspond directly to standard soil science concepts (observations, profiles, layers) rather than underlying database table boundaries.
 2.  **Dataset-Independent**: The payload structure is identical regardless of the target dataset (e.g., HWSD, SoilGrids, etc.) satisfying the query.
 3.  **Storage-Independent**: The API contract is decoupled from active database engines, indexes, or file seek mechanisms, remaining unaffected by database migrations.
 4.  **Stateless Requests**: Every request contains all necessary parameters to resolve itself, requiring no session history or server-side transaction states.
@@ -21,25 +21,25 @@ This document defines the public capabilities of the Global Soil Explorer. It ac
 ## Core Services
 
 ### 1. Coordinate Lookup
-*   **Purpose**: Resolve a geographical coordinate point to its specific Mapping Unit Identifier.
+*   **Purpose**: Resolve a geographical coordinate point to its spatial index location.
 *   **Inputs**:
     *   Coordinates (latitude and longitude)
 *   **Outputs**:
-    *   Mapping Unit Key
-*   **Domain Objects Involved**: `Coordinate`, `SoilLocation`, `SoilMappingUnit`.
+    *   Location Index Key
+*   **Domain Objects Involved**: `Coordinate`, `SoilObservation`.
 *   **Preconditions**: Coordinates must represent valid geographical locations.
 *   **Failure Conditions**: The coordinate lands outside supported dataset boundaries or on unmapped territory (e.g., oceans or glaciers), returning a "No Soil Data" error.
 
 ### 2. Soil Profile Retrieval
-*   **Purpose**: Fetch the complete vertical soil profile details for a given Mapping Unit Key.
+*   **Purpose**: Fetch the complete vertical soil profiles observed at a location.
 *   **Inputs**:
-    *   Mapping Unit Key
+    *   Location Index Key
     *   Dataset Version / Name (Optional, defaults to active standard)
 *   **Outputs**:
-    *   Complete `SoilProfile` containing component soils, layer details, and attribute metrics.
-*   **Domain Objects Involved**: `SoilMappingUnit`, `SoilComponent`, `SoilProfile`, `SoilLayer`, `SoilProperty`, `SoilClassification`.
-*   **Preconditions**: The requested Mapping Unit Key must exist in the active dataset index.
-*   **Failure Conditions**: The Mapping Unit Key is invalid or missing, returning a "No Soil Data" or "Invalid Key" error.
+    *   Complete `SoilObservation` containing the coordinates and a list of vertically stacked `SoilProfile` objects.
+*   **Domain Objects Involved**: `SoilObservation`, `SoilProfile`, `SoilLayer`, `SoilProperty`, `SoilClassification`.
+*   **Preconditions**: The requested Location Index Key must exist in the active dataset index.
+*   **Failure Conditions**: The Location Index Key is invalid or missing, returning a "No Soil Data" or "Invalid Key" error.
 
 ### 3. Soil Property Query
 *   **Purpose**: Query specific physical or chemical soil attributes at a location or within a depth range.
@@ -75,13 +75,13 @@ This document defines the public capabilities of the Global Soil Explorer. It ac
 *   **Failure Conditions**: Dataset identifier is unrecognized or inactive.
 
 ### 6. Search & Discovery
-*   **Purpose**: Search for Mapping Units by location name, climate zone, or dominant classification symbol.
+*   **Purpose**: Search for Location observations by regional descriptors, climate zone, or dominant classification symbol.
 *   **Inputs**:
     *   Search text query
     *   Filters (e.g., dominant soil group, climate zone)
 *   **Outputs**:
-    *   List of matching Mapping Units, share ratios, and their spatial coordinates.
-*   **Domain Objects Involved**: `SoilMappingUnit`, `SoilClassification`.
+    *   List of matching Soil Observations, composition shares, and their spatial coordinates.
+*   **Domain Objects Involved**: `SoilObservation`, `SoilClassification`.
 *   **Preconditions**: Search queries must be alphanumeric.
 *   **Failure Conditions**: No matches found, or filter arguments are malformed.
 
@@ -99,7 +99,8 @@ This document defines the public capabilities of the Global Soil Explorer. It ac
 
 The services exchange the following conceptual domain objects:
 *   **`Coordinate`**: Geographic spatial reference values (latitude, longitude).
-*   **`SoilProfile`**: Vertically stacked sequence of layers and component characteristics.
+*   **`SoilObservation`**: Geographic query wrapper carrying coordinate values and a list of observed profiles.
+*   **`SoilProfile`**: Vertically stacked sequence of layers and classification qualifiers, containing an optional composition share parameter.
 *   **`SoilLayer`**: Specified vertical depth segment boundaries (top and bottom limits in cm).
 *   **`SoilProperty`**: Individual physical or chemical attribute (name, value, unit of measure, quality indicators).
 *   **`SoilClassification`**: Standardized taxonomic classification names and description labels.
@@ -134,5 +135,5 @@ To ensure client stability as the platform evolves:
 ---
 
 ## Traceability
-*   **Domain Model**: All domain exchange objects (`SoilProfile`, `SoilLayer`, `SoilProperty`, `SoilClassification`, `Coordinate`) map directly to the conceptual entities defined in `docs/hwsd/domain-model.md`.
+*   **Domain Model**: All domain exchange objects (`SoilObservation`, `SoilProfile`, `SoilLayer`, `SoilProperty`, `SoilClassification`, `Coordinate`) map directly to the conceptual entities defined in `docs/hwsd/domain-model.md`.
 *   **System Architecture**: The core services correspond to components in the Orchestration Layer and Data Access Layer as outlined in `docs/architecture/system-architecture.md`.

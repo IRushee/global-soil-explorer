@@ -11,7 +11,7 @@ This document defines the conceptual system architecture of the Global Soil Expl
 1.  **Simplicity**: Avoid unnecessary abstraction. Ensure the system components are easy to understand, inspect, and debug.
 2.  **Maintainability**: Separate spatial calculations, data storage, and visual presentation so changes to one component do not affect the others.
 3.  **Scientific Correctness**: Ensure data integrity and provenance are preserved. The system must represent physical and chemical soil properties exactly as documented in the source datasets.
-4.  **Dataset Independence**: Design core domain layers to be independent of any single dataset structure, allowing future datasets to be integrated.
+4.  **Dataset Independence**: Design core domain layers to be independent of any single dataset structure (such as traditional mapping unit structures), allowing future datasets (including gridded predictions) to be integrated by returning a standard soil observation.
 5.  **Extensibility**: Provide defined extension points to support future features like AI analytics, time-series data, and remote sensing.
 6.  **Performance**: Optimize the data flow to ensure near-instantaneous spatial coordinate lookups and profile rendering.
 7.  **Reproducibility**: Ensure all preprocessing and database transformation pipelines are scripted, deterministic, and repeatable.
@@ -22,7 +22,7 @@ This document defines the conceptual system architecture of the Global Soil Expl
 The Global Soil Explorer is conceptually divided into three decoupled subsystems:
 
 1.  **Ingestion & Preprocessing Subsystem**: Runs offline. It ingests raw, immutable datasets, runs validation checks, and compiles them into optimized spatial indexes and normalized attribute tables.
-2.  **Core Query & Domain Subsystem**: Runs at runtime. It intercepts coordinate queries, converts coordinates to grid cell offsets, extracts mapping unit keys, retrieves physical/chemical properties, and assembles them into structured soil profiles.
+2.  **Core Query & Domain Subsystem**: Runs at runtime. It intercepts coordinate queries, converts coordinates to grid cell offsets, extracts spatial index keys, retrieves physical/chemical properties, and assembles them into structured soil observations.
 3.  **Presentation Subsystem**: Runs on the client side. It provides an interactive map interface, captures coordinate selections, and visualizes vertical soil profile parameters.
 
 ---
@@ -32,39 +32,39 @@ The Global Soil Explorer is conceptually divided into three decoupled subsystems
 ### 1. User Interface (UI)
 *   **Purpose**: Provide an interactive graphical dashboard for soil exploration.
 *   **Responsibilities**: Render global soil layers, handle map interactions, capture selected coordinates, and display vertical soil profile charts and metadata legends.
-*   **Inputs**: Visual map layer data, structured Soil Profile payloads.
+*   **Inputs**: Visual map layer data, structured Soil Observation payloads.
 *   **Outputs**: Coordinate query coordinates.
 *   **What it owns**: Visual layout state, client-side map interactions, charting components.
 *   **What it must not own**: Spatial calculations, database queries, dataset dictionaries, and code translation logic.
 
 ### 2. Orchestration Layer
 *   **Purpose**: Coordinate request execution and manage the sequence of operations.
-*   **Responsibilities**: Receive coordinate queries, trigger the spatial lookup, coordinate database attribute queries, and compile domain profiles.
+*   **Responsibilities**: Receive coordinate queries, trigger the spatial lookup, coordinate database attribute queries, and compile domain observations.
 *   **Inputs**: Coordinate queries.
-*   **Outputs**: Structured Soil Profile objects.
+*   **Outputs**: Structured Soil Observation objects.
 *   **What it owns**: Query orchestration, session flow.
 *   **What it must not own**: Raw database connections, direct binary raster file seeks, and UI rendering.
 
 ### 3. Spatial Lookup Engine
-*   **Purpose**: Resolve geographical coordinates to Mapping Unit Keys.
+*   **Purpose**: Resolve geographical coordinates to spatial index keys.
 *   **Responsibilities**: Translate latitude/longitude coordinate values to raster grid offsets and extract pixel values.
 *   **Inputs**: Validated coordinates.
-*   **Outputs**: Map Unit Identifier Key.
+*   **Outputs**: Spatial Index Key.
 *   **What it owns**: Spatial boundary calculation formulas and grid offset algorithms.
 *   **What it must not own**: Soil attribute databases, dictionary translations, and map presentation code.
 
 ### 4. Soil Domain Layer
 *   **Purpose**: Model the scientific entities and rules of the soil science domain.
-*   **Responsibilities**: Structure and validate profiles, layers, classifications, properties, and components.
+*   **Responsibilities**: Structure and validate geographic observations, profiles, layers, classifications, and properties.
 *   **Inputs**: Raw database records and code-translation metadata.
-*   **Outputs**: Validated domain objects (e.g., `SoilProfile`).
+*   **Outputs**: Validated domain objects (e.g., `SoilObservation`).
 *   **What it owns**: Soil domain validation logic, vertical profile stacking order, and unit conversions.
 *   **What it must not own**: File path routing, SQL query strings, and serialized output formats.
 
 ### 5. Data Access Layer
 *   **Purpose**: Abstract query operations from the active storage databases.
-*   **Responsibilities**: Retrieve mapping unit summaries, retrieve vertical layer records, and perform joins against dictionary lookup tables.
-*   **Inputs**: Map Unit Identifier Key.
+*   **Responsibilities**: Retrieve soil database attribute records, retrieve vertical layer records, and perform joins against dictionary lookup tables.
+*   **Inputs**: Spatial Index Key.
 *   **Outputs**: Raw database records and resolved labels.
 *   **What it owns**: Query structures, database retrieval logic.
 *   **What it must not own**: Spatial grid logic, business rules, and application state.
@@ -110,7 +110,7 @@ The system processes a user's query in a linear, unidirectional data flow:
    ↓
   Domain Objects
    ↓
-  Soil Profile
+  Soil Observation
    ↓
   Presentation
 ```
@@ -119,27 +119,27 @@ The system processes a user's query in a linear, unidirectional data flow:
 2.  **Map Interaction**: User triggers a geographical location query (by click or text entry).
 3.  **Coordinate**: Represents the selected point on the Earth's surface.
 4.  **Spatial Lookup**: The system extracts the location index key matching the coordinate.
-5.  **Domain Objects**: The system retrieves the mapping unit components, classifications, and properties.
-6.  **Soil Profile**: Combines layers and properties into a unified, vertically ordered soil profile representation.
-7.  **Presentation**: Renders the soil profile visually on the interface.
+5.  **Domain Objects**: The system retrieves the soil classifications, layers, and properties associated with the index.
+6.  **Soil Observation**: Combines layers and properties into a unified, vertically ordered soil profile representation nested under a single geographic observation.
+7.  **Presentation**: Renders the soil observation visually on the interface.
 
 ---
 
 ## Component Interactions
 *   The **User Interface** captures coordinate selections and requests lookups from the **Orchestration Layer**.
 *   The **Orchestration Layer** validates parameters and queries the **Spatial Lookup Engine**.
-*   The **Spatial Lookup Engine** calculates cell coordinates, seeks the index in the **Data Processing Pipeline**'s generated spatial index, and returns the Mapping Unit Key to the **Orchestration Layer**.
+*   The **Spatial Lookup Engine** calculates cell coordinates, seeks the index in the **Data Processing Pipeline**'s generated spatial index, and returns the spatial index key to the **Orchestration Layer**.
 *   The **Orchestration Layer** forwards this key to the **Data Access Layer**.
 *   The **Data Access Layer** queries the normalized tables, joins the results against dictionary tables, and returns raw record sets.
-*   The **Orchestration Layer** passes these records to the **Soil Domain Layer**, which translates them into structured **SoilProfile** domain objects.
-*   The **Orchestration Layer** formats this object and returns it to the **User Interface** for presentation.
+*   The **Orchestration Layer** passes these records to the **Soil Domain Layer**, which translates them into structured **SoilObservation** domain objects containing a list of **SoilProfile** instances.
+*   The **Orchestration Layer** formats this observation payload and returns it to the **User Interface** for presentation.
 
 ---
 
 ## Architectural Principles
 *   **Separation of Concerns**: Distinct separation between presentation logic, coordinate translation, database querying, and scientific domain objects.
 *   **Single Responsibility**: Each component has one job (e.g., the lookup engine converts coordinates to keys and nothing else).
-*   **Domain-First Design**: The core business logic models soil science concepts (profiles, layers, components) rather than storage layouts.
+*   **Domain-First Design**: The core business logic models soil science concepts (observations, profiles, layers) rather than storage layouts.
 *   **Storage Independence**: The query and domain components are decoupled from storage technologies, allowing changes to databases without rewrite of business logic.
 *   **Evidence-Based Processing**: Preprocessing steps validate outputs against raw source counts to prevent loss.
 *   **Immutable Raw Datasets**: Original source data is read-only and never modified.
@@ -170,9 +170,9 @@ The system processes a user's query in a linear, unidirectional data flow:
     *   *Carbon Estimates*: Soil carbon stock calculations.
     *   *Erosion Risk*: Vulnerability indexes.
     *   *Flood Susceptibility*: Soil water drainage assessment.
-3.  **AI Assistants**: AI plugins can consume the standard `SoilProfile` domain models to provide automated regional agricultural reports or ecological commentary.
+3.  **AI Assistants**: AI plugins can consume the standard `SoilObservation` domain models to provide automated regional agricultural reports or ecological commentary.
 4.  **Spatial Analysis**: High-performance spatial analysis modules (such as bounding-box aggregators) can hook directly into the Data Access Layer.
-5.  **Time-Series Data**: The `SoilProfile` object can be extended to include historical timestamps, tracking carbon changes over time.
+5.  **Time-Series Data**: The `SoilObservation` object can be extended to include historical timestamps, tracking carbon changes over time.
 6.  **Remote Sensing**: Surface parameters from satellite data can be joined with mapping units to provide land cover overlays.
 7.  **User Annotations**: Crowd-sourced soil observations can be linked to mapping unit identifiers.
 8.  **Plugins**: A standardized calculations interface allows adding custom predictors (e.g., crop suitability algorithms) without modifying core code.
@@ -184,7 +184,7 @@ The system processes a user's query in a linear, unidirectional data flow:
 
 ### Verified
 *   Raster layout metadata (dimensions of $21,600 \times 43,200$) is stable.
-*   The Mapping Unit Key is the join field linking the spatial grid to the relational tables.
+*   The spatial index key acts as the join field linking the spatial grid to the relational database tables in the processing/repository layer.
 *   Dictionary tables are essential to resolve code integers to text values.
 
 ### Assumed
@@ -196,7 +196,7 @@ The system processes a user's query in a linear, unidirectional data flow:
 *   **Dataset Versioning**: Structuring migration pipelines when source datasets release updates.
 *   **Incomplete Soil Profiles**: Resolving spatial regions where specific depth intervals have null or unmeasured property values.
 *   **Spatial Precision Guarantees**: Managing coordinate rounding errors when mapping continuous GPS locations to discrete grid cell boundaries.
-*   **Component Percentage Representation**: Handling mapping units where the sum of component shares does not equal 100%.
+*   **Soil Composition Representation**: Handling observations where the sum of profile composition shares does not equal 100%.
 
 ---
 
