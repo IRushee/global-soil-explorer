@@ -15,11 +15,10 @@
 
 ### 1. `Coordinate` (Value Object)
 *   **Purpose**: Represents a specific spatial point on the Earth's surface.
-*   **Responsibilities**: Defines the geographic location queried by the user.
+*   **Responsibilities**: Defines the geographic location queried by the user (implicitly assuming the WGS 84 coordinate system).
 *   **Important Attributes**:
     *   Latitude (Decimal Degrees North/South)
     *   Longitude (Decimal Degrees East/West)
-    *   Coordinate System (e.g., WGS 84)
 *   **Relationships**: Contained within a `SoilObservation`.
 *   **Source in HWSD**: User query inputs / CRS parameters in `HWSD2.prj`.
 *   **Mapping Type**: Verified
@@ -56,12 +55,11 @@
 
 ### 5. `SoilProperty` (Value Object)
 *   **Purpose**: Represents a specific physical, chemical, or organic attribute of a `SoilLayer`.
-*   **Responsibilities**: Stores the scientific value, unit of measure, and data quality flag.
+*   **Responsibilities**: Stores the scientific value and its unit of measure.
 *   **Important Attributes**:
-    *   Name (e.g., pH, Organic Carbon, Sand Fraction)
-    *   Value (Numeric or categorical code)
-    *   Unit (e.g., %, g/cm3, dS/m)
-    *   Quality Flag (Data coverage/reliability indicator)
+    *   Property Type (represented as PropertyType enum, e.g., pH, Organic Carbon, Sand Fraction)
+    *   Value (Numeric float value)
+    *   Unit (represented as Unit enum, e.g., percent, g/cm3, pH)
 *   **Relationships**: Measured within a `SoilLayer`.
 *   **Source in HWSD**: Column values in `HWSD2_LAYERS` and metadata definitions in `HWSD2_LAYERS_METADATA`.
 *   **Mapping Type**: Verified

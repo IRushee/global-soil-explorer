@@ -9,3 +9,8 @@ class InvalidCoordinateError(ValueError):
 class InvalidPropertyError(ValueError):
     """Raised when a SoilProperty violates type, unit, or range invariants."""
     pass
+
+
+class InvalidClassificationError(ValueError):
+    """Raised when a SoilClassification violates type or validation invariants."""
+    pass

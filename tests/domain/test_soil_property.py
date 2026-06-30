@@ -1,9 +1,9 @@
 """Unit tests for the SoilProperty value object."""
 
-import pytest
 from dataclasses import FrozenInstanceError
 from types import MappingProxyType
 
+import pytest
 from backend.domain import (
     InvalidPropertyError,
     PropertyType,
@@ -44,7 +44,7 @@ def test_invalid_types() -> None:
 
     # Invalid value type (bool)
     with pytest.raises(InvalidPropertyError, match="value must be"):
-        SoilProperty(PropertyType.PH_WATER, True, Unit.PH)  # type: ignore
+        SoilProperty(PropertyType.PH_WATER, True, Unit.PH)
 
 
 def test_invalid_units() -> None:
@@ -125,8 +125,10 @@ def test_enum_uniqueness() -> None:
     assert len(set(unit_values)) == len(unit_values)
 
     # Test str subclassing
-    assert PropertyType.PH_WATER == "ph_water"
-    assert Unit.PERCENT == "percent"
+    assert isinstance(PropertyType.PH_WATER, str)
+    assert isinstance(Unit.PERCENT, str)
+    assert PropertyType.PH_WATER.value == "ph_water"
+    assert Unit.PERCENT.value == "percent"
 
 
 def test_equality() -> None:

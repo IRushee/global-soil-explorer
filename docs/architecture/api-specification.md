@@ -48,7 +48,7 @@ This document defines the public capabilities of the Global Soil Explorer. It ac
     *   Property name key (e.g., pH, Organic Carbon)
     *   Depth interval boundaries (Optional)
 *   **Outputs**:
-    *   Specific property value, unit, and quality flag.
+    *   Specific property value and unit of measure.
 *   **Domain Objects Involved**: `Coordinate`, `SoilLayer`, `SoilProperty`.
 *   **Preconditions**: Coordinates must reside within valid mapping unit bounds, and the property key must be supported.
 *   **Failure Conditions**: The property key is unrecognized, or the depth interval exceeds valid soil depth ranges.
@@ -102,7 +102,7 @@ The services exchange the following conceptual domain objects:
 *   **`SoilObservation`**: Geographic query wrapper carrying coordinate values and a list of observed profiles.
 *   **`SoilProfile`**: Vertically stacked sequence of layers and classification qualifiers, containing an optional composition share parameter.
 *   **`SoilLayer`**: Specified vertical depth segment boundaries (top and bottom limits in cm).
-*   **`SoilProperty`**: Individual physical or chemical attribute (name, value, unit of measure, quality indicators).
+*   **`SoilProperty`**: Individual physical or chemical attribute (property type, value, unit of measure).
 *   **`SoilClassification`**: Standardized taxonomic classification names and description labels.
 *   **`DatasetMetadata`**: Structural details of the source inventory (version, license, coordinate reference system, and scale).
 
