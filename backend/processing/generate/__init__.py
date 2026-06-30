@@ -2,22 +2,22 @@
 
 import logging
 
-from backend.processing.shared.config import PreprocessingConfig
+from backend.processing.shared.context import PreprocessingContext
 
 logger = logging.getLogger(__name__)
 
 
-def generate_runtime_assets(config: PreprocessingConfig) -> None:
+def generate_runtime_assets(context: PreprocessingContext) -> None:
     """Generate final query-optimized runtime files and indexes.
 
     Args:
-        config: The PreprocessingConfig instance.
+        context: The PreprocessingContext instance.
     """
     logger.info(
         "Generating runtime query assets for %s (v%s) in %s",
-        config.dataset_name,
-        config.dataset_version,
-        config.output_dir,
+        context.config.dataset_name,
+        context.config.dataset_version,
+        context.config.output_dir,
     )
     # Placeholder for extracting/arranging raster grids and indexes
     logger.info("Runtime asset generation completed (placeholder).")

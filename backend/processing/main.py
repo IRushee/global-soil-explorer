@@ -9,7 +9,8 @@ from backend.processing.convert import convert_database
 from backend.processing.extract import extract_archive
 from backend.processing.generate import generate_runtime_assets
 from backend.processing.shared.config import PreprocessingConfig
-from backend.processing.validate import validate_dataset
+from backend.processing.shared.context import PreprocessingContext
+from backend.processing.validate import validate_hwsd_dataset
 
 # Setup logger configuration for the pipeline execution
 logging.basicConfig(
@@ -20,27 +21,45 @@ logging.basicConfig(
 logger = logging.getLogger("backend.processing.main")
 
 
-def run_preprocessing_pipeline(config: PreprocessingConfig) -> None:
+def run_preprocessing_pipeline(
+    config: PreprocessingConfig,
+) -> PreprocessingContext:
     """Orchestrate the preprocessing pipeline stages sequentially.
 
     Args:
         config: The PreprocessingConfig instance.
+
+    Returns:
+        The validated PreprocessingContext object.
     """
     logger.info("Initializing offline preprocessing pipeline...")
 
-    # 1. Extraction Stage
+    # 1. Extraction Stage (if required)
     extract_archive(config)
 
-    # 2. Validation Stage
-    validate_dataset(config)
+    # 2. Validation and Discovery Stage
+    result = validate_hwsd_dataset(config.raw_data_dir)
+    if not result.is_valid:
+        for err in result.errors:
+            logger.error(err)
+        raise ValueError(f"Dataset validation failed: {result.errors[0]}")
 
-    # 3. Database Conversion Stage
-    convert_database(config)
+    # Build validated preprocessing context
+    context = PreprocessingContext(
+        config=config,
+        discovered_paths=result.discovered_paths,
+        metadata=result.metadata,
+        is_valid=result.is_valid,
+    )
 
-    # 4. Runtime Asset Generation Stage
-    generate_runtime_assets(config)
+    # 3. Database Conversion Stage (downstream)
+    convert_database(context)
+
+    # 4. Runtime Asset Generation Stage (downstream)
+    generate_runtime_assets(context)
 
     logger.info("Offline preprocessing pipeline successfully completed.")
+    return context
 
 
 def main() -> None:
