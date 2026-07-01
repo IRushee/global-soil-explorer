@@ -24,7 +24,7 @@ Verify the compliance of the package design with the inward-directed dependency 
 
 ## Conclusion
 *   The architecture is clean, decoupled, and enforces a solid separation of concerns.
-*   The system structure is ready to support the next milestone (implementing `SpatialLookupService`).
+*   The system structure is ready to support the next milestone (milestone-15-spatial-lookup).
 *   No critical gaps were identified for the completed milestones.
 
 ## References

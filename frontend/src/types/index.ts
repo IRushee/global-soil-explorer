@@ -229,10 +229,16 @@ export interface MapRenderer {
   initialize(containerId: string, options: MapOptions): void
   setCenter(lat: number, lon: number): void
   setZoom(zoom: number): void
+  getCenter(): [number, number] | null
+  getZoom(): number | null
+  setMaxBounds(bounds: [[number, number], [number, number]]): void
+  setBasemapStyle(basemap: string): void
+  setCursor(cursorType: string): void
+  setSelectionMarker(lat: number | null, lon: number | null): void
   addLayer(layer: OverlayLayer): void
   updateLayer(layerId: string, updates: Partial<OverlayLayer>): void
   removeLayer(layerId: string): void
-  on(event: 'click' | 'zoomend' | 'moveend', handler: (e: any) => void): void
+  on(event: 'click' | 'zoomend' | 'moveend' | 'mousemove', handler: (e: any) => void): void
   destroy(): void
 }
 

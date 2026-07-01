@@ -39,7 +39,7 @@ This checklist defines the architectural gates and verification steps that must 
 
 ---
 
-## 5. Architectural Abstractions & Refinements (Milestone 22.1 Gates)
+## 5. Architectural Abstractions & Refinements (milestone-21-frontend-architecture Gates)
 
 - [x] **Plugin Architecture Registry**: Central registries for Dataset, Basemap, Overlay, Renderer, Search, Export, and Analysis Providers are specified. Adding new modules requires no changes to core app code.
 - [x] **Event Bus Architecture**: 중앙 Event Bus defined. Decouples modules with typed, standardized events (`CoordinateSelected`, `ObservationLoaded`, `LayerChanged`, etc.).

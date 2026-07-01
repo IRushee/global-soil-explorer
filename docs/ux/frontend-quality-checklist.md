@@ -1,6 +1,6 @@
 # Global Soil Explorer: Frontend UX Quality Checklist
 
-This checklist must be verified prior to freezing frontend milestones and release integrations.
+This checklist must be verified prior to freezing frontend milestones (milestone-21-frontend-architecture, milestone-22-frontend-foundation, milestone-23-ux-freeze) and release integrations.
 
 ---
 

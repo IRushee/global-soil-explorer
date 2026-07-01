@@ -94,6 +94,14 @@ describe('Global Soil Explorer Infrastructure Tests', () => {
       })
     }).not.toThrow()
     
+    // Check extended interface methods in fallback mode
+    expect(mapRenderer.getCenter()).toBeNull()
+    expect(mapRenderer.getZoom()).toBeNull()
+    expect(() => mapRenderer.setMaxBounds([[-180, -90], [180, 90]])).not.toThrow()
+    expect(() => mapRenderer.setBasemapStyle('satellite')).not.toThrow()
+    expect(() => mapRenderer.setSelectionMarker(12.34, 56.78)).not.toThrow()
+    expect(() => mapRenderer.setCursor('wait')).not.toThrow()
+    
     // Cleanup
     mapRenderer.destroy()
   })
@@ -103,5 +111,52 @@ describe('Global Soil Explorer Infrastructure Tests', () => {
     const { container } = render(<AppProvider />)
     expect(container).toBeDefined()
     expect(screen.getByText(/Global Soil Explorer/i)).toBeDefined()
+  })
+
+  // 8. SelectCoordinateCommand and Event Bus integration
+  test('SelectCoordinateCommand updates selectedCoordinate and dispatches CoordinateSelected event', async () => {
+    const spySelected = vi.fn()
+    const unsub = eventBus.subscribe('CoordinateSelected', spySelected)
+
+    const coord = { latitude: 45.0, longitude: 10.0 }
+    
+    const store = useGlobalStore.getState()
+    const originalCoord = store.selectedCoordinate
+    const originalObs = store.activeObservation
+
+    const selectFnMock = async (c: any, fetch: boolean) => {
+      store.setSelectedCoordinate(c)
+      if (c) {
+        eventBus.dispatch('CoordinateSelected', c)
+      }
+    }
+
+    class MockSelectCoordinateCommand {
+      id = 'SelectCoordinate'
+      timestamp = Date.now()
+      constructor(
+        private coord: any,
+        private prevCoord: any,
+        private prevObs: any,
+        private selectFn: any
+      ) {}
+      async execute() { await this.selectFn(this.coord, true) }
+      async undo() {
+        await this.selectFn(this.prevCoord, false)
+        useGlobalStore.getState().setActiveObservation(this.prevObs)
+      }
+    }
+
+    const cmd = new MockSelectCoordinateCommand(coord, originalCoord, originalObs, selectFnMock)
+    await cmd.execute()
+
+    expect(useGlobalStore.getState().selectedCoordinate).toEqual(coord)
+    expect(spySelected).toHaveBeenCalledOnce()
+    expect(spySelected.mock.calls[0][0].payload).toEqual(coord)
+
+    await cmd.undo()
+    expect(useGlobalStore.getState().selectedCoordinate).toBeNull()
+
+    unsub()
   })
 })

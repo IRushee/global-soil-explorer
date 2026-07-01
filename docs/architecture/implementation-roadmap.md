@@ -18,50 +18,120 @@ This document defines a phased implementation roadmap for the Global Soil Explor
 
 ## Milestones
 
-### 1. Environment
+### 1. Environment (milestone-01-development-environment)
 *   **Objective**: Configure the developer workspace, code styling formats, package manager boundaries, and test structure.
 *   **Deliverables**: Project configuration profiles, package dependency files, linter/formatter rules, and initial test directories.
 *   **Success Criteria**: Running the validation suite passes successfully with zero formatting, type-checking, or linting errors.
 
-### 2. Architecture
+### 2. Backend Skeleton (milestone-02-backend-skeleton)
+*   **Objective**: Establish the basic backend package structure and project directory boundaries.
+*   **Deliverables**: Directory scaffolding, basic application setup, and initial modular structure.
+*   **Success Criteria**: Clean package imports with no circular dependencies in basic scaffolding.
+
+### 3. Domain Architecture (milestone-03-domain-architecture)
 *   **Objective**: Define the conceptual system architecture, module structure, and dependency boundaries before implementing functionality.
 *   **Deliverables**: Architecture blueprint documents, design guidelines, and folder structure scaffolding.
 *   **Success Criteria**: Architectural specifications are accepted and frozen.
 
-### 3. Domain
-*   **Objective**: Write the core scientific value objects representing soil properties, layers, classifications, profiles, and observations.
-*   **Deliverables**: Fully validated domain objects (`Coordinate`, `SoilProperty`, `SoilClassification`, `SoilLayer`, `SoilProfile`, `SoilObservation`) with comprehensive test suites.
-*   **Success Criteria**: Automated domain tests verify vertical stacking boundaries, ordering, and data type invariants with zero errors.
+### 4. Coordinate (milestone-04-coordinate)
+*   **Objective**: Implement the `Coordinate` value object representing geographic locations with validation rules.
+*   **Deliverables**: `Coordinate` domain model implementation and associated unit tests.
+*   **Success Criteria**: Geographic coordinate checks ensure latitude and longitude boundaries are validated.
 
-### 4. Contracts
+### 5. Soil Property (milestone-05-soil-property)
+*   **Objective**: Implement the `SoilProperty` value object containing soil chemical and physical measurements.
+*   **Deliverables**: `SoilProperty` domain model and unit tests.
+*   **Success Criteria**: Validates value ranges and units for individual properties.
+
+### 6. Soil Classification (milestone-06-soil-classification)
+*   **Objective**: Implement the `SoilClassification` domain model representing taxonomy mapping (FAO/WRB).
+*   **Deliverables**: `SoilClassification` domain model and lookup tables support.
+*   **Success Criteria**: Standard WRB and FAO soil classification attributes are correctly encapsulated.
+
+### 7. Soil Layer (milestone-07-soil-layer)
+*   **Objective**: Implement the `SoilLayer` value object representing vertical depth slices of soil profiles.
+*   **Deliverables**: `SoilLayer` domain model and unit tests.
+*   **Success Criteria**: Enforces depth ordering and layers stacking constraints.
+
+### 8. Soil Profile (milestone-08-soil-profile)
+*   **Objective**: Implement the `SoilProfile` aggregate representing vertical stacked sequences of layers at a location.
+*   **Deliverables**: `SoilProfile` domain model and integration tests.
+*   **Success Criteria**: Layers are validated for depth coherence and sequence sorting.
+
+### 9. Soil Observation (milestone-09-soil-observation)
+*   **Objective**: Implement the aggregate root `SoilObservation` uniting coordinates, profiles, and metadata.
+*   **Deliverables**: `SoilObservation` domain model and tests.
+*   **Success Criteria**: Combines spatial coordinates with structural soil profiles and metadata.
+
+### 10. Domain Contracts (milestone-10-domain-contracts)
 *   **Objective**: Define standard abstract interfaces for database repositories and coordinate lookup services.
 *   **Deliverables**: Repository and lookup interface definitions (`SoilObservationRepository`, `SpatialLookupService`) under `contracts`.
 *   **Success Criteria**: Contracts are fully decoupled from storage/raster implementations and type check cleanly.
 
-### 5. Processing
-*   **Objective**: Build the offline pipeline script to transform raw datasets into normalized SQLite tables and extract binary raster streams.
-*   **Deliverables**: Data extraction, database conversion, validation scripts, and grid extraction scripts.
-*   **Success Criteria**: The offline preprocessing script runs to completion, generating correct query-ready relational databases and extracted raster grids.
+### 11. Preprocessing Pipeline (milestone-11-preprocessing-pipeline)
+*   **Objective**: Build the framework for the offline processing pipeline, establishing logging context and configurations.
+*   **Deliverables**: Ingestion orchestrator code, configuration files, and preprocessing context helpers.
+*   **Success Criteria**: Pipeline scaffolding runs with configurable environment paths.
 
-### 6. Repository
+### 12. MDB Reader (milestone-12-mdb-reader)
+*   **Objective**: Build the offline utility to read raw tabular data from Access `.mdb` databases.
+*   **Deliverables**: Tabular reader modules using `mdbtools`.
+*   **Success Criteria**: MDB files are parsed with correct schema/type casting.
+
+### 13. Database Generation (milestone-13-database-generation)
+*   **Objective**: Run database conversion and sentinel cleaning.
+*   **Deliverables**: DB generation scripts mapping raw inputs to SQLite and clearing negative flag values.
+*   **Success Criteria**: Normalized `hwsd.db` SQLite database is generated with zero corruption.
+
+### 14. SQLite Repository (milestone-14-sqlite-repository)
 *   **Objective**: Develop SQLite repository query handlers and domain mapper logic.
 *   **Deliverables**: Database connection handlers, query builders, and database row-to-domain mapping helpers.
 *   **Success Criteria**: Queries retrieve correct soil profiles and classification dictionaries mapped to validated domain objects.
 
-### 7. Spatial Lookup
-*   **Objective**: Implement grid coordinate translations and spatial lookup handlers.
-*   **Deliverables**: Coordinate translators and spatial grid lookup handlers.
+### 15. Spatial Lookup (milestone-15-spatial-lookup)
+*   **Objective**: Implement grid coordinate translations and spatial lookup handlers using direct raster seeks.
+*   **Deliverables**: Coordinate translators and spatial grid lookup handlers (`BILRasterSpatialLookupService`).
 *   **Success Criteria**: Coordinate queries successfully resolve spatial positions to retrieve valid spatial identifiers.
 
-### 8. Application
+### 16. Application Service (milestone-16-application-service)
 *   **Objective**: Implement orchestration services to tie the query pipeline together.
 *   **Deliverables**: Orchestrator service invoking lookup, fetching database attributes, and compiling domain objects.
 *   **Success Criteria**: Integration tests verify end-to-end lookup flow from coordinates to domain models.
 
-### 9. Interfaces
-*   **Objective**: Create the web API controllers, request routing protocols, and client map interface dashboards.
-*   **Deliverables**: FastAPI endpoint routes, JSON serialization schemas, visual browser map clicks, and vertical profile charting widgets.
-*   **Success Criteria**: UI clicking maps resolves coordinates and renders vertical soil profile charts in under a second.
+### 17. FastAPI (milestone-17-fastapi)
+*   **Objective**: Create the web API controllers and request routing protocols.
+*   **Deliverables**: FastAPI endpoint routes and request routing controllers.
+*   **Success Criteria**: REST endpoints serve coordinates queries.
+
+### 18. Domain & Repository Freeze (milestone-18-domain-and-repository-freeze)
+*   **Objective**: Perform quality audits on backend domain validation and repository performance.
+*   **Deliverables**: Repository audit reports, domain coverage validations, and baseline performance benchmarks.
+*   **Success Criteria**: Domain and persistence layers are declared frozen.
+
+### 19. Application Freeze (milestone-19-application-freeze)
+*   **Objective**: Verify application service orchestration, concurrency capabilities, and edge cases.
+*   **Deliverables**: Application freeze report and concurrent stress test results.
+*   **Success Criteria**: No memory leaks or exception leakage under concurrent load.
+
+### 20. API Contract (milestone-20-api-contract)
+*   **Objective**: Ensure that API responses strictly conform to documentation schemas and performance criteria.
+*   **Deliverables**: OpenAPI schema definition, API contract verification reports, and response structure freezing.
+*   **Success Criteria**: API responses match schemas and run under 20ms latency.
+
+### 21. Frontend Architecture (milestone-21-frontend-architecture)
+*   **Objective**: Establish frontend workspace structure, directory layout, and library dependencies.
+*   **Deliverables**: React/TypeScript scaffolding, routing mapping, and Zustand stores setup.
+*   **Success Criteria**: Scaffold compiles successfully with zero lint/formatting issues.
+
+### 22. Frontend Foundation (milestone-22-frontend-foundation)
+*   **Objective**: Implement the map wrapper component, query pipeline state management, and core presentation modules.
+*   **Deliverables**: Map wrapper with MapLibre GL JS and component rendering frames.
+*   **Success Criteria**: Map is responsive and coordinates selection correctly updates global state.
+
+### 23. UX Freeze (milestone-23-ux-freeze)
+*   **Objective**: Freeze user interface design templates, keyboard shortcuts, styling components, and accessibility support.
+*   **Deliverables**: Completed UX design specs, accessibility checklists, and dashboard elements.
+*   **Success Criteria**: Interactive visual dashboard elements are stable, accessible, and ready for integration.
 
 ---
 

@@ -110,7 +110,7 @@ Welcome to the architectural documentation for the Global Soil Explorer. This di
     *   [Scientific Visualization Guidelines](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/visualization-guidelines.md) - Soil vertical horizons color mappings and depth charts axis conventions.
     *   [Scientific Information Layout](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/scientific-information-layout.md) - Main observation panel layout and tab hierarchy.
     *   [UX Performance Guidelines](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/performance-guidelines.md) - Telemetry targets, virtualization, and lazy routes.
-    *   [Frontend UX Quality Checklist](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/frontend-quality-checklist.md) - Verify checklist before freezing frontend milestones.
+    *   [Frontend UX Quality Checklist](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/frontend-quality-checklist.md) - Verify checklist before freezing frontend milestones (milestone-21-frontend-architecture, milestone-22-frontend-foundation, milestone-23-ux-freeze).
     *   [Interaction State Matrix](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/interaction-state-matrix.md) - Trigger-to-feedback state mappings.
     *   [Component State Matrix](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/component-state-matrix.md) - Responsive hierarchies and performance indicators for toolbars/drawers.
 

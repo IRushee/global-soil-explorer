@@ -1,5 +1,5 @@
 # ruff: noqa
-"""Milestone 20 Verification Script.
+"""API Contract Verification Script.
 Validates dataset correctness, measures performance, and runs concurrency stress tests.
 """
 

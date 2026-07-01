@@ -19,14 +19,14 @@ Assess the current state of the global soil explorer backend components, highlig
 *   ✓ **MDB Reader**: Implemented Microsoft Access `.mdb` tabular reader utilizing `mdbtools` with primary key parsing.
 *   ✓ **Database Generation**: Implemented conversion pipeline mapping raw MDB files to SQLite with negative sentinel cleaning.
 *   ✓ **SQLite Repository**: Implemented concrete `SoilObservationRepository` retrieving data from `hwsd.db` and mapping to domain models.
-*   ✓ **SpatialLookupService** (Milestone 15): Resolves validated geographic coordinates to spatial IDs using direct `.bil` raster file seek operations with microseconds-level latency.
-*   ✓ **Application Service** (Milestone 16): Integrates lookup and repository layers into a cohesive business query orchestrator with custom exception handling and domain reconstruction.
+*   ✓ **SpatialLookupService** (milestone-15-spatial-lookup): Resolves validated geographic coordinates to spatial IDs using direct `.bil` raster file seek operations with microseconds-level latency.
+*   ✓ **Application Service** (milestone-16-application-service): Integrates lookup and repository layers into a cohesive business query orchestrator with custom exception handling and domain reconstruction.
 *   ✓ **Architecture**: Fully documented and frozen runtime architectures.
 
 ### 2. Pending Milestones
-*   ✓ **REST API (FastAPI)**: Expose coordinates query endpoints.
+*   ✓ **REST API (FastAPI)** (milestone-17-fastapi / milestone-20-api-contract): Expose coordinates query endpoints.
 *   □ **Tile Service**: Implement map visualization raster/vector tile engine (independent of analytical queries).
-*   □ **Frontend (React/TypeScript)**: Build user dashboard, interactive map explorer, and profile charts.
+*   □ **Frontend (React/TypeScript)** (milestone-21-frontend-architecture / milestone-22-frontend-foundation / milestone-23-ux-freeze): Build user dashboard, interactive map explorer, and profile charts.
 *   □ **Deployment**: Set up production server environments.
 
 ## Conclusion

@@ -43,7 +43,7 @@ Latency metrics for resolving coordinate queries on the binary raster grid:
 *   **10000 Lookups**:
     *   Average: `0.010 ms` | Median: `0.001 ms` | Min: `0.001 ms` | Max: `0.793 ms` | 95th Percentile: `0.103 ms`
 
-### 4. Application Service Performance (Milestone 16)
+### 4. Application Service Performance (milestone-16-application-service)
 Latency metrics for the complete coordinated query pipeline (Coordinate → SpatialLookupService → Repository → Domain reconstruction) over valid land coordinates, including step breakdowns:
 
 *   **1 Query**:
@@ -65,7 +65,7 @@ Latency metrics for the complete coordinated query pipeline (Coordinate → Spat
     *   **3. Domain Reconstruction**: Average: `0.262 ms`
     *   **4. Application Orchestration**: Average: `0.138 ms`
 
-### 5. REST API Performance (Milestone 17)
+### 5. REST API Performance (milestone-17-fastapi)
 Baseline metrics for the `GET /soil` endpoint (Coordinate query) over valid land coordinates (including FastAPI routing, validation, serialization, and middleware overhead):
 
 *   **1 Request**:

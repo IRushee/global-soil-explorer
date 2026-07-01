@@ -4,6 +4,30 @@ import { mapRenderer } from '../map/wrapper'
 import { studyAreaRegistry } from '../services/studyArea'
 import { logger } from '../utils/logger'
 import { soilApi } from '../api/client'
+import { Coordinate, SoilObservation, Command } from '../types'
+import { eventBus } from '../utils/eventBus'
+import { commandManager } from '../utils/commandBus'
+
+class SelectCoordinateCommand implements Command {
+  id = 'SelectCoordinate'
+  timestamp = Date.now()
+
+  constructor(
+    private coord: Coordinate,
+    private previousCoord: Coordinate | null,
+    private previousObs: SoilObservation | null,
+    private selectFn: (coord: Coordinate | null, executeFetch: boolean) => Promise<void>
+  ) {}
+
+  async execute() {
+    await this.selectFn(this.coord, true)
+  }
+
+  async undo() {
+    await this.selectFn(this.previousCoord, false)
+    useGlobalStore.getState().setActiveObservation(this.previousObs)
+  }
+}
 
 export const AppShell: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -25,12 +49,17 @@ export const AppShell: React.FC = () => {
     setSelectedCoordinate,
     activeObservation,
     setActiveObservation,
+    loading,
+    setLoading,
+    error,
+    setError,
+    basemap,
+    setBasemap,
   } = useGlobalStore()
 
-  // Local state for loading, error, and profile tabs
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Local state for profile tabs & hover coordinates
   const [activeProfileIndex, setActiveProfileIndex] = useState(0)
+  const [hoverCoord, setHoverCoord] = useState<Coordinate | null>(null)
 
   // Ref to hold the map click handler to avoid stale closures
   const clickHandlerRef = useRef<((e: any) => void) | null>(null)
@@ -39,21 +68,63 @@ export const AppShell: React.FC = () => {
   useEffect(() => {
     clickHandlerRef.current = async (e: any) => {
       const coord = e.coordinate
-      setSelectedCoordinate(coord)
-      setInfoPanelOpen(true)
-      setLoading(true)
-      setError(null)
-      try {
-        const obs = await soilApi.getSoilObservation(coord)
-        setActiveObservation(obs)
-        setActiveProfileIndex(0) // Reset tab index on successful fetch
-      } catch (err: any) {
-        logger.error('Failed to retrieve soil observation:', err)
-        setError(err.message || 'Failed to retrieve soil observation')
-        setActiveObservation(null)
-      } finally {
-        setLoading(false)
+      const store = useGlobalStore.getState()
+
+      const cmd = new SelectCoordinateCommand(
+        coord,
+        store.selectedCoordinate,
+        store.activeObservation,
+        async (selectedCoord, executeFetch) => {
+          setSelectedCoordinate(selectedCoord)
+          if (selectedCoord) {
+            eventBus.dispatch('CoordinateSelected', selectedCoord)
+            if (executeFetch) {
+              setInfoPanelOpen(true)
+              setLoading(true)
+              setError(null)
+              try {
+                const obs = await soilApi.getSoilObservation(selectedCoord)
+                setActiveObservation(obs)
+                eventBus.dispatch('ObservationLoaded', obs)
+                setActiveProfileIndex(0) // Reset tab index on successful fetch
+              } catch (err: any) {
+                logger.error('Failed to retrieve soil observation:', err)
+                setError(err.message || 'Failed to retrieve soil observation')
+                setActiveObservation(null)
+                eventBus.dispatch('ObservationLoaded', null)
+              } finally {
+                setLoading(false)
+              }
+            }
+          } else {
+            setActiveObservation(null)
+          }
+        }
+      )
+
+      commandManager.executeCommand(cmd)
+    }
+  })
+
+  // Forward to refs to avoid recreating event listeners
+  const moveEndHandlerRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    moveEndHandlerRef.current = () => {
+      const newCenter = mapRenderer.getCenter()
+      const newZoom = mapRenderer.getZoom()
+      if (newCenter) {
+        useGlobalStore.getState().setCenter(newCenter)
       }
+      if (newZoom !== null) {
+        useGlobalStore.getState().setZoom(newZoom)
+      }
+    }
+  })
+
+  const mouseMoveHandlerRef = useRef<((e: any) => void) | null>(null)
+  useEffect(() => {
+    mouseMoveHandlerRef.current = (e: any) => {
+      setHoverCoord(e.coordinate)
     }
   })
 
@@ -63,28 +134,10 @@ export const AppShell: React.FC = () => {
       try {
         mapRenderer.initialize('map-canvas-container', {
           container: 'map-canvas-container',
-          style: {
-            version: 8,
-            sources: {
-              'osm-tiles': {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256,
-                attribution: '© OpenStreetMap contributors',
-              },
-            },
-            layers: [
-              {
-                id: 'osm-layer',
-                type: 'raster',
-                source: 'osm-tiles',
-                minzoom: 0,
-                maxzoom: 19,
-              },
-            ],
-          },
+          style: basemap, // Load the configured default basemap
           center: center,
           zoom: zoom,
+          maxBounds: activeStudyArea.bounds, // Apply study area constraints
         })
         setInitialized(true)
         logger.info('Map wrapper initialized inside AppShell layout')
@@ -93,6 +146,24 @@ export const AppShell: React.FC = () => {
         mapRenderer.on('click', (e) => {
           if (clickHandlerRef.current) {
             clickHandlerRef.current(e)
+          }
+        })
+
+        mapRenderer.on('moveend', () => {
+          if (moveEndHandlerRef.current) {
+            moveEndHandlerRef.current()
+          }
+        })
+
+        mapRenderer.on('zoomend', () => {
+          if (moveEndHandlerRef.current) {
+            moveEndHandlerRef.current()
+          }
+        })
+
+        mapRenderer.on('mousemove', (e) => {
+          if (mouseMoveHandlerRef.current) {
+            mouseMoveHandlerRef.current(e)
           }
         })
       } catch (err) {
@@ -107,15 +178,56 @@ export const AppShell: React.FC = () => {
     }
   }, [])
 
+  // Manage selection indicator marker
+  useEffect(() => {
+    if (isInitialized) {
+      if (selectedCoordinate) {
+        mapRenderer.setSelectionMarker(selectedCoordinate.latitude, selectedCoordinate.longitude)
+      } else {
+        mapRenderer.setSelectionMarker(null, null)
+      }
+    }
+  }, [selectedCoordinate, isInitialized])
+
+  // Manage cursor feedback depending on loading state
+  useEffect(() => {
+    if (isInitialized) {
+      mapRenderer.setCursor(loading ? 'wait' : 'pointer')
+    }
+  }, [loading, isInitialized])
+
   const handleStudyAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const areaId = e.target.value
     const area = studyAreaRegistry.get(areaId)
     setActiveStudyArea(area)
-    mapRenderer.setCenter(
-      (area.bounds[0][1] + area.bounds[1][1]) / 2,
-      (area.bounds[0][0] + area.bounds[1][0]) / 2
-    )
+    eventBus.dispatch('StudyAreaChanged', area)
+
+    // Update basemap to first available basemap of new study area
+    const defaultBm = area.availableBasemaps[0] || 'satellite'
+    setBasemap(defaultBm)
+    mapRenderer.setBasemapStyle(defaultBm)
+    eventBus.dispatch('BasemapChanged', defaultBm)
+
+    // Apply constraints of the new study area:
+    mapRenderer.setMaxBounds(area.bounds)
+
+    const lat = (area.bounds[0][1] + area.bounds[1][1]) / 2
+    const lon = (area.bounds[0][0] + area.bounds[1][0]) / 2
+    mapRenderer.setCenter(lat, lon)
     mapRenderer.setZoom(area.defaultZoom)
+  }
+
+  const handleDatasetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const ds = e.target.value
+    setActiveDatasetId(ds)
+    eventBus.dispatch('DatasetChanged', ds)
+  }
+
+  const handleBasemapChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const bm = e.target.value
+    setBasemap(bm)
+    mapRenderer.setBasemapStyle(bm)
+    eventBus.dispatch('BasemapChanged', bm)
   }
 
   // Helper to extract properties from layers (measurements or fallback to properties array)
@@ -459,12 +571,28 @@ export const AppShell: React.FC = () => {
             <span className="text-slate-400">Dataset:</span>
             <select
               value={activeDatasetId}
-              onChange={(e) => setActiveDatasetId(e.target.value)}
+              onChange={handleDatasetChange}
               className="bg-slate-800 border border-slate-700 px-3 py-1 rounded text-slate-200 outline-none focus:border-teal-500 transition-colors"
             >
               {activeStudyArea.availableDatasets.map((ds) => (
                 <option key={ds} value={ds}>
                   {ds.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Basemap Dropdown */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-slate-400">Basemap:</span>
+            <select
+              value={basemap}
+              onChange={handleBasemapChange}
+              className="bg-slate-800 border border-slate-700 px-3 py-1 rounded text-slate-200 outline-none focus:border-teal-500 transition-colors"
+            >
+              {activeStudyArea.availableBasemaps.map((bm) => (
+                <option key={bm} value={bm}>
+                  {bm.charAt(0).toUpperCase() + bm.slice(1)}
                 </option>
               ))}
             </select>
@@ -552,8 +680,39 @@ export const AppShell: React.FC = () => {
         <div className="flex items-center gap-4">
           <span>Map Engine: {isInitialized ? 'ONLINE' : 'BOOTING'}</span>
           <span>Center: {center[0].toFixed(4)}°E, {center[1].toFixed(4)}°N</span>
+          {hoverCoord && (
+            <span>Cursor: {hoverCoord.longitude.toFixed(4)}°E, {hoverCoord.latitude.toFixed(4)}°N</span>
+          )}
         </div>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 mr-4 border-r border-slate-800 pr-4">
+            <button
+              onClick={() => {
+                try {
+                  commandManager.undo()
+                } catch (e) {
+                  logger.error('Undo error:', e)
+                }
+              }}
+              className="px-2 py-0.5 rounded bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-350 transition-colors cursor-pointer"
+              title="Undo last selection"
+            >
+              Undo
+            </button>
+            <button
+              onClick={() => {
+                try {
+                  commandManager.redo()
+                } catch (e) {
+                  logger.error('Redo error:', e)
+                }
+              }}
+              className="px-2 py-0.5 rounded bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-350 transition-colors cursor-pointer"
+              title="Redo last selection"
+            >
+              Redo
+            </button>
+          </div>
           <span>Projection: {activeStudyArea.projection}</span>
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />

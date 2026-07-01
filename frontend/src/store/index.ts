@@ -23,8 +23,12 @@ export interface MapSlice {
 export interface SelectionSlice {
   selectedCoordinate: Coordinate | null
   activeObservation: SoilObservation | null
+  loading: boolean
+  error: string | null
   setSelectedCoordinate: (coord: Coordinate | null) => void
   setActiveObservation: (obs: SoilObservation | null) => void
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
 }
 
 export interface LayoutSlice {
@@ -91,8 +95,12 @@ export const useGlobalStore = create<GlobalStoreState>((set) => ({
   // SelectionSlice
   selectedCoordinate: null,
   activeObservation: null,
+  loading: false,
+  error: null,
   setSelectedCoordinate: (selectedCoordinate) => set({ selectedCoordinate }),
   setActiveObservation: (activeObservation) => set({ activeObservation }),
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
 
   // LayoutSlice
   sidebarOpen: true,
