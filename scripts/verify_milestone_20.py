@@ -363,6 +363,7 @@ def main():
         sys.exit(1)
 
     print("Initializing services...")
+    enable_sqlite_caching()
     spatial_lookup = BILRasterSpatialLookupService(
         DEFAULT_BIL_PATH, DEFAULT_HDR_PATH
     )
@@ -384,6 +385,7 @@ def main():
         )
     finally:
         spatial_lookup.close()
+        disable_sqlite_caching()
 
 
 if __name__ == "__main__":

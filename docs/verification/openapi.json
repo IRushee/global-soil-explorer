@@ -1,0 +1,1229 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Global Soil Explorer API",
+    "description": "REST API exposing Harmonized World Soil Database (HWSD) v2.0 dataset spatial lookup and database queries.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Check Application Health",
+        "description": "Returns current health status and versions for python runtime, spatial lookup grid parser, and SQLite database connectivity.",
+        "operationId": "check_health_health_get",
+        "responses": {
+          "200": {
+            "description": "All infrastructure components are fully operational.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseSchema"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more infrastructure components are unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseSchema"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/soil": {
+      "get": {
+        "summary": "Query Soil Observation",
+        "description": "Retrieves vertical soil profile properties, texture shares, and taxonomic classifications at the specified latitude and longitude coordinates.",
+        "operationId": "get_soil_soil_get",
+        "parameters": [
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Geographic latitude coordinate in decimal degrees (-90 to 90).",
+              "example": 52.0,
+              "title": "Latitude"
+            },
+            "description": "Geographic latitude coordinate in decimal degrees (-90 to 90)."
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Geographic longitude coordinate in decimal degrees (-180 to 180).",
+              "example": 10.0,
+              "title": "Longitude"
+            },
+            "description": "Geographic longitude coordinate in decimal degrees (-180 to 180)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coordinates resolved and observation returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoilObservationSchema"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Coordinates resolved to a void/ocean area (no observation)."
+          },
+          "400": {
+            "description": "Geographic coordinates are invalid or out of bounds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Underlying spatial index or database unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected application failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChemicalPropertiesSchema": {
+        "properties": {
+          "ph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ph",
+            "description": "Soil pH measured in water.",
+            "example": 6.5
+          },
+          "organic_carbon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organic Carbon",
+            "description": "Organic carbon share (%).",
+            "example": 2.5
+          },
+          "total_nitrogen": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Nitrogen",
+            "description": "Total nitrogen concentration (g/kg).",
+            "example": 0.15
+          },
+          "cn_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cn Ratio",
+            "description": "Carbon-to-Nitrogen ratio.",
+            "example": 12.0
+          },
+          "cec_soil": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cec Soil",
+            "description": "Cation Exchange Capacity of the soil (cmol(+)/kg).",
+            "example": 15.0
+          },
+          "cec_clay": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cec Clay",
+            "description": "Cation Exchange Capacity of the clay fraction (cmol(+)/kg).",
+            "example": 24.0
+          },
+          "effective_cec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Cec",
+            "description": "Effective Cation Exchange Capacity (cmol(+)/kg).",
+            "example": 14.8
+          },
+          "teb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teb",
+            "description": "Total Exchangeable Bases (cmol(+)/kg).",
+            "example": 10.0
+          },
+          "base_saturation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Saturation",
+            "description": "Base Saturation index (%).",
+            "example": 75.0
+          },
+          "aluminum_saturation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aluminum Saturation",
+            "description": "Aluminum Saturation index (%).",
+            "example": 0.0
+          },
+          "esp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esp",
+            "description": "Exchangeable Sodium Percentage (%).",
+            "example": 1.0
+          },
+          "calcium_carbonate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calcium Carbonate",
+            "description": "Calcium carbonate equivalent (%).",
+            "example": 2.0
+          },
+          "gypsum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gypsum",
+            "description": "Gypsum weight share (%).",
+            "example": 0.0
+          },
+          "electrical_conductivity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Electrical Conductivity",
+            "description": "Electrical conductivity (dS/m).",
+            "example": 0.2
+          }
+        },
+        "type": "object",
+        "title": "ChemicalPropertiesSchema",
+        "description": "Soil chemical measurements."
+      },
+      "CoordinateSchema": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "title": "Latitude",
+            "description": "Latitude of the coordinate in decimal degrees.",
+            "example": 52.0
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude",
+            "description": "Longitude of the coordinate in decimal degrees.",
+            "example": 10.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "CoordinateSchema",
+        "description": "Geographic coordinate schema."
+      },
+      "DatasetMetadataSchema": {
+        "properties": {
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage",
+            "description": "Source map coverage identifier code.",
+            "example": 1
+          },
+          "library": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library",
+            "description": "WRB library identifier name.",
+            "example": "HWSD"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Active database or data source description.",
+            "example": "HWSD v2.0 Database"
+          },
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version",
+            "description": "Active dataset version indicator.",
+            "example": "v2.0"
+          },
+          "reference_identifiers": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Identifiers",
+            "description": "Identifiers referencing source records.",
+            "example": [
+              [
+                "HWSD2_SMU_ID",
+                "10221"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "title": "DatasetMetadataSchema",
+        "description": "Database source provenance and dataset metadata."
+      },
+      "EnvironmentalContextSchema": {
+        "properties": {
+          "koppen_climate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Koppen Climate",
+            "description": "Koppen-Geiger climate classification code.",
+            "example": "C"
+          }
+        },
+        "type": "object",
+        "title": "EnvironmentalContextSchema",
+        "description": "Climatic and environmental context of the soil site."
+      },
+      "ErrorResponseSchema": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "Detailed explanation of the error.",
+            "example": "Latitude must be a numeric value."
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponseSchema",
+        "description": "Standardized API error message response."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponseSchema": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Overall application health state (e.g. 'healthy').",
+            "example": "healthy"
+          },
+          "runtime_version": {
+            "type": "string",
+            "title": "Runtime Version",
+            "description": "Python runtime environment version.",
+            "example": "3.11.15"
+          },
+          "dataset_name": {
+            "type": "string",
+            "title": "Dataset Name",
+            "description": "Standardized name of the active dataset.",
+            "example": "HWSD v2.0"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version",
+            "description": "Active dataset version identifier.",
+            "example": "2.0"
+          },
+          "spatial_lookup_available": {
+            "type": "boolean",
+            "title": "Spatial Lookup Available",
+            "description": "Status of the spatial raster binary lookup service."
+          },
+          "repository_available": {
+            "type": "boolean",
+            "title": "Repository Available",
+            "description": "Status of the soil observation SQLite repository."
+          },
+          "database_available": {
+            "type": "boolean",
+            "title": "Database Available",
+            "description": "Status of connection to the underlying database file."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "runtime_version",
+          "dataset_name",
+          "dataset_version",
+          "spatial_lookup_available",
+          "repository_available",
+          "database_available"
+        ],
+        "title": "HealthResponseSchema",
+        "description": "API and dataset health status schema."
+      },
+      "HydraulicPropertiesSchema": {
+        "properties": {
+          "available_water_capacity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Water Capacity",
+            "description": "Available water capacity (mm).",
+            "example": 150.0
+          }
+        },
+        "type": "object",
+        "title": "HydraulicPropertiesSchema",
+        "description": "Soil hydraulic measurements."
+      },
+      "HydrologicContextSchema": {
+        "properties": {
+          "drainage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drainage",
+            "description": "Natural soil drainage class code.",
+            "example": "W"
+          },
+          "water_regime": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Water Regime",
+            "description": "Water regime characteristics code.",
+            "example": 1
+          },
+          "impermeable_layer": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impermeable Layer",
+            "description": "Impermeable layer depth constraint class.",
+            "example": 0
+          }
+        },
+        "type": "object",
+        "title": "HydrologicContextSchema",
+        "description": "Hydrologic soil attributes schema."
+      },
+      "LandLimitationsSchema": {
+        "properties": {
+          "root_depth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Depth",
+            "description": "Total soil depth class accessible to plant roots.",
+            "example": 1
+          },
+          "root_obstacles": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Obstacles",
+            "description": "Mechanical obstacles class to plant roots.",
+            "example": 0
+          },
+          "phase1": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase1",
+            "description": "Soil phase modifier limitation class 1.",
+            "example": 0
+          },
+          "phase2": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase2",
+            "description": "Soil phase modifier limitation class 2.",
+            "example": 0
+          },
+          "additional_property": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Property",
+            "description": "Additional soil property modifier constraints.",
+            "example": 0
+          }
+        },
+        "type": "object",
+        "title": "LandLimitationsSchema",
+        "description": "Agronomic and physical growth limitations."
+      },
+      "LayerMeasurementsSchema": {
+        "properties": {
+          "physical": {
+            "$ref": "#/components/schemas/PhysicalPropertiesSchema",
+            "description": "Physical properties group."
+          },
+          "chemical": {
+            "$ref": "#/components/schemas/ChemicalPropertiesSchema",
+            "description": "Chemical properties group."
+          },
+          "hydraulic": {
+            "$ref": "#/components/schemas/HydraulicPropertiesSchema",
+            "description": "Hydraulic properties group."
+          }
+        },
+        "type": "object",
+        "required": [
+          "physical",
+          "chemical",
+          "hydraulic"
+        ],
+        "title": "LayerMeasurementsSchema",
+        "description": "Consolidated layer measurement tables."
+      },
+      "PhysicalPropertiesSchema": {
+        "properties": {
+          "sand": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sand",
+            "description": "Weight share of sand fraction (%).",
+            "example": 40.0
+          },
+          "silt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Silt",
+            "description": "Weight share of silt fraction (%).",
+            "example": 30.0
+          },
+          "clay": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clay",
+            "description": "Weight share of clay fraction (%).",
+            "example": 30.0
+          },
+          "coarse_fragments": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coarse Fragments",
+            "description": "Volume share of coarse fragments (%).",
+            "example": 5.0
+          },
+          "bulk_density": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bulk Density",
+            "description": "Soil bulk density (g/cm\u00b3).",
+            "example": 1.4
+          },
+          "ref_bulk_density": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Bulk Density",
+            "description": "Reference bulk density (g/cm\u00b3).",
+            "example": 1.45
+          }
+        },
+        "type": "object",
+        "title": "PhysicalPropertiesSchema",
+        "description": "Soil physical measurements."
+      },
+      "PropertyType": {
+        "type": "string",
+        "enum": [
+          "ph_water",
+          "bulk_density",
+          "coarse_fragments",
+          "rooting_depth_limit",
+          "cation_exchange_capacity",
+          "base_saturation",
+          "available_water_capacity",
+          "organic_carbon",
+          "sand",
+          "silt",
+          "clay"
+        ],
+        "title": "PropertyType",
+        "description": "Supported standard physical and chemical soil properties."
+      },
+      "SoilClassificationSchema": {
+        "properties": {
+          "taxonomy_standard": {
+            "type": "string",
+            "title": "Taxonomy Standard",
+            "description": "Taxonomic classification standard.",
+            "example": "WRB 2022"
+          },
+          "class_symbol": {
+            "type": "string",
+            "title": "Class Symbol",
+            "description": "Taxonomic class identifier code.",
+            "example": "LV"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name",
+            "description": "Taxonomic class description name.",
+            "example": "Luvisols"
+          },
+          "wrb4_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb4 Code",
+            "description": "WRB 4th Edition classification code."
+          },
+          "wrb4_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb4 Name",
+            "description": "WRB 4th Edition classification name."
+          },
+          "wrb2_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb2 Code",
+            "description": "WRB 2nd Edition classification code."
+          },
+          "wrb2_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb2 Name",
+            "description": "WRB 2nd Edition classification name."
+          },
+          "fao90_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fao90 Code",
+            "description": "FAO 1990 classification code."
+          },
+          "fao90_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fao90 Name",
+            "description": "FAO 1990 classification name."
+          },
+          "wrb_phase_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb Phase Code",
+            "description": "WRB soil phase identifier code."
+          },
+          "wrb_phase_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb Phase Name",
+            "description": "WRB soil phase name description."
+          },
+          "dominant_group_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dominant Group Code",
+            "description": "Dominant soil classification group code."
+          },
+          "national_classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "National Classification",
+            "description": "National soil classification system descriptor."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taxonomy_standard",
+          "class_symbol",
+          "class_name"
+        ],
+        "title": "SoilClassificationSchema",
+        "description": "Taxonomic soil classification schema representing standard codes and values."
+      },
+      "SoilLayerSchema": {
+        "properties": {
+          "top_depth_cm": {
+            "type": "number",
+            "title": "Top Depth Cm",
+            "description": "Depth to top of layer in centimeters.",
+            "example": 0.0
+          },
+          "bottom_depth_cm": {
+            "type": "number",
+            "title": "Bottom Depth Cm",
+            "description": "Depth to bottom of layer in centimeters.",
+            "example": 30.0
+          },
+          "properties": {
+            "items": {
+              "$ref": "#/components/schemas/SoilPropertySchema"
+            },
+            "type": "array",
+            "title": "Properties",
+            "description": "Chemical and physical property values list (backward compatible)."
+          },
+          "texture": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SoilTextureSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Texture codes for this layer depth."
+          },
+          "measurements": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LayerMeasurementsSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Consolidated chemical and physical measurement groups."
+          }
+        },
+        "type": "object",
+        "required": [
+          "top_depth_cm",
+          "bottom_depth_cm",
+          "properties"
+        ],
+        "title": "SoilLayerSchema",
+        "description": "Vertical soil layer schema interval."
+      },
+      "SoilObservationSchema": {
+        "properties": {
+          "coordinate": {
+            "$ref": "#/components/schemas/CoordinateSchema",
+            "description": "The query coordinate associated with this observation."
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/SoilProfileSchema"
+            },
+            "type": "array",
+            "title": "Profiles",
+            "description": "The list of soil profiles matching this spatial location."
+          },
+          "environmental_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EnvironmentalContextSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Environmental and climate descriptors of the site."
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetMetadataSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Data provenance, standards, and dataset metadata."
+          }
+        },
+        "type": "object",
+        "required": [
+          "coordinate",
+          "profiles"
+        ],
+        "title": "SoilObservationSchema",
+        "description": "Scientific observation at location coordinates."
+      },
+      "SoilProfileSchema": {
+        "properties": {
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/SoilLayerSchema"
+            },
+            "type": "array",
+            "title": "Layers",
+            "description": "Stack of vertical soil layers ordered by depth."
+          },
+          "classification": {
+            "$ref": "#/components/schemas/SoilClassificationSchema",
+            "description": "Taxonomic classification details."
+          },
+          "composition_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Composition Share",
+            "description": "Percentage composition of this profile in the spatial unit.",
+            "example": 80.0
+          },
+          "hydrologic_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HydrologicContextSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hydrologic attributes of this profile."
+          },
+          "land_limitations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandLimitationsSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Agronomic and growth limitation ratings."
+          },
+          "sequence_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Index",
+            "description": "Rank of this profile in the overall mapping unit.",
+            "example": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "layers",
+          "classification"
+        ],
+        "title": "SoilProfileSchema",
+        "description": "Multi-layer vertical soil profile schema."
+      },
+      "SoilPropertySchema": {
+        "properties": {
+          "property_type": {
+            "$ref": "#/components/schemas/PropertyType",
+            "description": "The scientific property code/type.",
+            "example": "ph_water"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "description": "The numeric measurement value.",
+            "example": 6.5
+          },
+          "unit": {
+            "$ref": "#/components/schemas/Unit",
+            "description": "Standardized unit of measurement.",
+            "example": "ph"
+          }
+        },
+        "type": "object",
+        "required": [
+          "property_type",
+          "value",
+          "unit"
+        ],
+        "title": "SoilPropertySchema",
+        "description": "Legacy property model (retained for backward compatibility)."
+      },
+      "SoilTextureSchema": {
+        "properties": {
+          "usda_texture": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usda Texture",
+            "description": "Soil texture class identifier based on USDA standard.",
+            "example": 3
+          },
+          "soter_texture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soter Texture",
+            "description": "Soil texture class identifier based on SOTER standard.",
+            "example": "M"
+          }
+        },
+        "type": "object",
+        "title": "SoilTextureSchema",
+        "description": "Soil layer texture schema."
+      },
+      "Unit": {
+        "type": "string",
+        "enum": [
+          "percent",
+          "g_cm3",
+          "cmolc_kg",
+          "mm",
+          "cm",
+          "ph"
+        ],
+        "title": "Unit",
+        "description": "Standardized scientific units of measure."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
