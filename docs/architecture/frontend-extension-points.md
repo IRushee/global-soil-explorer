@@ -6,7 +6,7 @@ This document outlines the architectural extension points designed to make the W
 
 ## 1. Multi-Dataset Adaptability
 
-The API integration layer separates the REST payload ingestion from the presentation components using a **Unified Domain Adapter Pattern**:
+The API integration layer separates the REST payload ingestion from the presentation components using a **Unified Domain Translator Pattern**:
 
 ```
                        API Response (JSON)
@@ -15,7 +15,7 @@ The API integration layer separates the REST payload ingestion from the presenta
       [HWSD v2]            [SoilGrids]            [SSURGO]
           │                     │                     │
           ▼                     ▼                     ▼
-   Adapter (v1)          Adapter (SoilGrids)     Adapter (SSURGO)
+   Translator (v1)      Translator (SoilGrids)  Translator (SSURGO)
           │                     │                     │
           └─────────────────────┼─────────────────────┘
                                 ▼
@@ -25,7 +25,7 @@ The API integration layer separates the REST payload ingestion from the presenta
                        Presentation Components
 ```
 
-*   **Dataset Independence**: Adding a new global dataset (e.g. SoilGrids) only requires writing a new Adapter class implementing the front-end `ObservationSchema` interface. The UI components (e.g. `LayerDepthChart`, `MeasurementsTable`) read this standard schema and do not need to change.
+*   **Dataset Independence**: Adding a new global dataset (e.g. SoilGrids) only requires writing a new Scientific Dataset Translator class implementing the front-end `ObservationSchema` interface. The UI components (e.g. `LayerDepthChart`, `MeasurementsTable`) read this standard schema and do not need to change.
 
 ---
 
