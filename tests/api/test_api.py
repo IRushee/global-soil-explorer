@@ -63,7 +63,7 @@ def test_api_soil_valid_land(client: TestClient) -> None:
     profile = data["profiles"][0]
     assert "classification" in profile
     assert "taxonomy_standard" in profile["classification"]
-    assert "class_symbol" in profile["classification"]
+    assert "class_symbol" in profile["classification"]["codes"]
     assert "class_name" in profile["classification"]
 
     assert "layers" in profile
@@ -97,7 +97,7 @@ def test_api_soil_open_water_returns_wr(client: TestClient) -> None:
     data = response.json()
     profiles = data["profiles"]
     assert len(profiles) > 0
-    assert profiles[0]["classification"]["class_symbol"] == "WR"
+    assert profiles[0]["classification"]["codes"]["class_symbol"] == "WR"
     assert profiles[0]["classification"]["class_name"] == "Open Water"
 
 
@@ -110,7 +110,7 @@ def test_api_soil_glacier_returns_gg(client: TestClient) -> None:
     data = response.json()
     profiles = data["profiles"]
     assert len(profiles) == 1
-    assert profiles[0]["classification"]["class_symbol"] == "GG"
+    assert profiles[0]["classification"]["codes"]["class_symbol"] == "GG"
     assert profiles[0]["classification"]["class_name"] == "Glaciers"
 
 
@@ -124,7 +124,7 @@ def test_api_soil_urban_returns_tc(client: TestClient) -> None:
     profiles = data["profiles"]
     assert len(profiles) > 0
     # At least one profile should contain Technosols class symbol "TC"
-    symbols = [p["classification"]["class_symbol"] for p in profiles]
+    symbols = [p["classification"]["codes"]["class_symbol"] for p in profiles]
     assert "TC" in symbols
 
 
@@ -190,3 +190,22 @@ def test_api_soil_unexpected_failure(
     response = client.get("/soil", params={"latitude": 52.0, "longitude": 10.0})
     assert response.status_code == 500
     assert "An unexpected internal server error occurred." in response.json()["detail"]
+
+
+def test_v1_api_health_endpoint(client: TestClient) -> None:
+    """Verify GET /v1/health works identically to unversioned endpoint."""
+    response = client.get("/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert data["dataset_name"] == "HWSD v2.0"
+
+
+def test_v1_api_soil_valid_land(client: TestClient) -> None:
+    """Verify GET /v1/soil works identically to unversioned endpoint."""
+    response = client.get("/v1/soil", params={"latitude": 52.0, "longitude": 10.0})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["coordinate"]["latitude"] == 52.0
+    assert len(data["profiles"]) > 0
+    assert "codes" in data["profiles"][0]["classification"]

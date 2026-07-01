@@ -6,6 +6,123 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/v1/health": {
+      "get": {
+        "summary": "Check Application Health",
+        "description": "Returns current health status and versions for python runtime, spatial lookup grid parser, and SQLite database connectivity.",
+        "operationId": "check_health_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "All infrastructure components are fully operational.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseSchema"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more infrastructure components are unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseSchema"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/soil": {
+      "get": {
+        "summary": "Query Soil Observation",
+        "description": "Retrieves vertical soil profile properties, texture shares, and taxonomic classifications at the specified latitude and longitude coordinates.",
+        "operationId": "get_soil_v1_soil_get",
+        "parameters": [
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Geographic latitude coordinate in decimal degrees (-90 to 90).",
+              "example": 52.0,
+              "title": "Latitude"
+            },
+            "description": "Geographic latitude coordinate in decimal degrees (-90 to 90)."
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "Geographic longitude coordinate in decimal degrees (-180 to 180).",
+              "example": 10.0,
+              "title": "Longitude"
+            },
+            "description": "Geographic longitude coordinate in decimal degrees (-180 to 180)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coordinates resolved and observation returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoilObservationSchema"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Coordinates resolved to a void/ocean area (no observation)."
+          },
+          "400": {
+            "description": "Geographic coordinates are invalid or out of bounds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Underlying spatial index or database unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected application failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Check Application Health",
@@ -338,7 +455,7 @@
         "title": "CoordinateSchema",
         "description": "Geographic coordinate schema."
       },
-      "DatasetMetadataSchema": {
+      "DatasetMetadataCodes": {
         "properties": {
           "coverage": {
             "anyOf": [
@@ -350,8 +467,28 @@
               }
             ],
             "title": "Coverage",
-            "description": "Source map coverage identifier code.",
+            "description": "Raw coverage source identifier code.",
             "example": 1
+          }
+        },
+        "type": "object",
+        "title": "DatasetMetadataCodes",
+        "description": "Raw metadata codes."
+      },
+      "DatasetMetadataSchema": {
+        "properties": {
+          "coverage_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Description",
+            "description": "Scientific description of the source map coverage.",
+            "example": "FAO/UNESCO soil map of the world"
           },
           "library": {
             "anyOf": [
@@ -408,16 +545,23 @@
               }
             ],
             "title": "Reference Identifiers",
-            "description": "Identifiers referencing source records.",
+            "description": "Scientific reference identifiers (e.g., Soil Mapping Unit IDs).",
             "example": [
               [
-                "HWSD2_SMU_ID",
+                "SMU_ID",
                 "10221"
               ]
             ]
+          },
+          "codes": {
+            "$ref": "#/components/schemas/DatasetMetadataCodes",
+            "description": "Grouped raw metadata codes."
           }
         },
         "type": "object",
+        "required": [
+          "codes"
+        ],
         "title": "DatasetMetadataSchema",
         "description": "Database source provenance and dataset metadata."
       },
@@ -545,7 +689,7 @@
         "title": "HydraulicPropertiesSchema",
         "description": "Soil hydraulic measurements."
       },
-      "HydrologicContextSchema": {
+      "HydrologicContextCodes": {
         "properties": {
           "drainage": {
             "anyOf": [
@@ -588,10 +732,61 @@
           }
         },
         "type": "object",
-        "title": "HydrologicContextSchema",
-        "description": "Hydrologic soil attributes schema."
+        "title": "HydrologicContextCodes",
+        "description": "Raw hydrologic codes."
       },
-      "LandLimitationsSchema": {
+      "HydrologicContextSchema": {
+        "properties": {
+          "drainage_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drainage Description",
+            "description": "Resolved scientific description of natural soil drainage.",
+            "example": "Well drained"
+          },
+          "water_regime_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Water Regime Description",
+            "description": "Resolved scientific description of water regime characteristics."
+          },
+          "impermeable_layer_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impermeable Layer Description",
+            "description": "Resolved scientific description of impermeable layer depth constraint."
+          },
+          "codes": {
+            "$ref": "#/components/schemas/HydrologicContextCodes",
+            "description": "Grouped raw hydrologic codes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "codes"
+        ],
+        "title": "HydrologicContextSchema",
+        "description": "Hydrologic soil attributes schema representing scientific descriptions."
+      },
+      "LandLimitationsCodes": {
         "properties": {
           "root_depth": {
             "anyOf": [
@@ -660,8 +855,82 @@
           }
         },
         "type": "object",
+        "title": "LandLimitationsCodes",
+        "description": "Raw limitation codes."
+      },
+      "LandLimitationsSchema": {
+        "properties": {
+          "root_depth_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Depth Description",
+            "description": "Scientific description of root depth accessibility."
+          },
+          "root_obstacles_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Obstacles Description",
+            "description": "Scientific description of root obstacles."
+          },
+          "phase1_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase1 Description",
+            "description": "Scientific description of phase limitation 1."
+          },
+          "phase2_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase2 Description",
+            "description": "Scientific description of phase limitation 2."
+          },
+          "additional_property_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Property Description",
+            "description": "Scientific description of additional property modifier."
+          },
+          "codes": {
+            "$ref": "#/components/schemas/LandLimitationsCodes",
+            "description": "Grouped raw limitation codes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "codes"
+        ],
         "title": "LandLimitationsSchema",
-        "description": "Agronomic and physical growth limitations."
+        "description": "Agronomic and physical growth limitations representing scientific descriptions."
       },
       "LayerMeasurementsSchema": {
         "properties": {
@@ -790,25 +1059,13 @@
         "title": "PropertyType",
         "description": "Supported standard physical and chemical soil properties."
       },
-      "SoilClassificationSchema": {
+      "SoilClassificationCodes": {
         "properties": {
-          "taxonomy_standard": {
-            "type": "string",
-            "title": "Taxonomy Standard",
-            "description": "Taxonomic classification standard.",
-            "example": "WRB 2022"
-          },
           "class_symbol": {
             "type": "string",
             "title": "Class Symbol",
             "description": "Taxonomic class identifier code.",
             "example": "LV"
-          },
-          "class_name": {
-            "type": "string",
-            "title": "Class Name",
-            "description": "Taxonomic class description name.",
-            "example": "Luvisols"
           },
           "wrb4_code": {
             "anyOf": [
@@ -822,18 +1079,6 @@
             "title": "Wrb4 Code",
             "description": "WRB 4th Edition classification code."
           },
-          "wrb4_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Wrb4 Name",
-            "description": "WRB 4th Edition classification name."
-          },
           "wrb2_code": {
             "anyOf": [
               {
@@ -845,18 +1090,6 @@
             ],
             "title": "Wrb2 Code",
             "description": "WRB 2nd Edition classification code."
-          },
-          "wrb2_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Wrb2 Name",
-            "description": "WRB 2nd Edition classification name."
           },
           "fao90_code": {
             "anyOf": [
@@ -870,18 +1103,6 @@
             "title": "Fao90 Code",
             "description": "FAO 1990 classification code."
           },
-          "fao90_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fao90 Name",
-            "description": "FAO 1990 classification name."
-          },
           "wrb_phase_code": {
             "anyOf": [
               {
@@ -893,6 +1114,76 @@
             ],
             "title": "Wrb Phase Code",
             "description": "WRB soil phase identifier code."
+          },
+          "dominant_group_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dominant Group Code",
+            "description": "Dominant soil classification group code."
+          }
+        },
+        "type": "object",
+        "required": [
+          "class_symbol"
+        ],
+        "title": "SoilClassificationCodes",
+        "description": "Raw taxonomic classification codes."
+      },
+      "SoilClassificationSchema": {
+        "properties": {
+          "taxonomy_standard": {
+            "type": "string",
+            "title": "Taxonomy Standard",
+            "description": "Taxonomic classification standard.",
+            "example": "WRB 2022"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name",
+            "description": "Taxonomic class description name.",
+            "example": "Luvisols"
+          },
+          "wrb4_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb4 Name",
+            "description": "WRB 4th Edition classification name."
+          },
+          "wrb2_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wrb2 Name",
+            "description": "WRB 2nd Edition classification name."
+          },
+          "fao90_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fao90 Name",
+            "description": "FAO 1990 classification name."
           },
           "wrb_phase_name": {
             "anyOf": [
@@ -906,18 +1197,6 @@
             "title": "Wrb Phase Name",
             "description": "WRB soil phase name description."
           },
-          "dominant_group_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dominant Group Code",
-            "description": "Dominant soil classification group code."
-          },
           "national_classification": {
             "anyOf": [
               {
@@ -929,16 +1208,20 @@
             ],
             "title": "National Classification",
             "description": "National soil classification system descriptor."
+          },
+          "codes": {
+            "$ref": "#/components/schemas/SoilClassificationCodes",
+            "description": "Grouped raw taxonomic codes."
           }
         },
         "type": "object",
         "required": [
           "taxonomy_standard",
-          "class_symbol",
-          "class_name"
+          "class_name",
+          "codes"
         ],
         "title": "SoilClassificationSchema",
-        "description": "Taxonomic soil classification schema representing standard codes and values."
+        "description": "Taxonomic soil classification schema representing standard scientific values."
       },
       "SoilLayerSchema": {
         "properties": {
@@ -960,7 +1243,8 @@
             },
             "type": "array",
             "title": "Properties",
-            "description": "Chemical and physical property values list (backward compatible)."
+            "description": "Chemical and physical property values list (backward compatible).",
+            "deprecated": true
           },
           "texture": {
             "anyOf": [
@@ -1138,7 +1422,7 @@
         "title": "SoilPropertySchema",
         "description": "Legacy property model (retained for backward compatibility)."
       },
-      "SoilTextureSchema": {
+      "SoilTextureCodes": {
         "properties": {
           "usda_texture": {
             "anyOf": [
@@ -1168,8 +1452,46 @@
           }
         },
         "type": "object",
+        "title": "SoilTextureCodes",
+        "description": "Raw texture codes."
+      },
+      "SoilTextureSchema": {
+        "properties": {
+          "usda_texture_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usda Texture Description",
+            "description": "Scientific description of USDA texture class."
+          },
+          "soter_texture_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soter Texture Description",
+            "description": "Scientific description of SOTER texture class."
+          },
+          "codes": {
+            "$ref": "#/components/schemas/SoilTextureCodes",
+            "description": "Grouped raw texture codes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "codes"
+        ],
         "title": "SoilTextureSchema",
-        "description": "Soil layer texture schema."
+        "description": "Soil layer texture schema representing scientific descriptions."
       },
       "Unit": {
         "type": "string",

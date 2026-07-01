@@ -62,7 +62,11 @@ def create_app() -> FastAPI:
     # Register custom and override exception handlers
     register_exception_handlers(app)
 
-    # Mount API routers
+    # Mount API routers under version prefix
+    app.include_router(health.router, prefix="/v1")
+    app.include_router(soil.router, prefix="/v1")
+
+    # Mount unversioned API routers for backward compatibility aliases
     app.include_router(health.router)
     app.include_router(soil.router)
 

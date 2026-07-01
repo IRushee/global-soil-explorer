@@ -30,13 +30,23 @@ class EnvironmentalContextSchema(BaseModel):
     )
 
 
-class DatasetMetadataSchema(BaseModel):
-    """Database source provenance and dataset metadata."""
+class DatasetMetadataCodes(BaseModel):
+    """Raw metadata codes."""
 
     coverage: int | None = Field(
         None,
-        description="Source map coverage identifier code.",
+        description="Raw coverage source identifier code.",
         json_schema_extra={"example": 1},
+    )
+
+
+class DatasetMetadataSchema(BaseModel):
+    """Database source provenance and dataset metadata."""
+
+    coverage_description: str | None = Field(
+        None,
+        description="Scientific description of the source map coverage.",
+        json_schema_extra={"example": "FAO/UNESCO soil map of the world"},
     )
     library: str | None = Field(
         None,
@@ -55,63 +65,70 @@ class DatasetMetadataSchema(BaseModel):
     )
     reference_identifiers: list[list[str]] | None = Field(
         None,
-        description="Identifiers referencing source records.",
-        json_schema_extra={"example": [["HWSD2_SMU_ID", "10221"]]},
+        description="Scientific reference identifiers (e.g., Soil Mapping Unit IDs).",
+        json_schema_extra={"example": [["SMU_ID", "10221"]]},
+    )
+    codes: DatasetMetadataCodes = Field(..., description="Grouped raw metadata codes.")
+
+
+class SoilClassificationCodes(BaseModel):
+    """Raw taxonomic classification codes."""
+
+    class_symbol: str = Field(
+        ...,
+        description="Taxonomic class identifier code.",
+        json_schema_extra={"example": "LV"},
+    )
+    wrb4_code: str | None = Field(
+        None, description="WRB 4th Edition classification code."
+    )
+    wrb2_code: str | None = Field(
+        None, description="WRB 2nd Edition classification code."
+    )
+    fao90_code: str | None = Field(
+        None, description="FAO 1990 classification code."
+    )
+    wrb_phase_code: str | None = Field(
+        None, description="WRB soil phase identifier code."
+    )
+    dominant_group_code: str | None = Field(
+        None, description="Dominant soil classification group code."
     )
 
 
 class SoilClassificationSchema(BaseModel):
-    """Taxonomic soil classification schema representing standard codes and values."""
+    """Taxonomic soil classification schema representing standard scientific values."""
 
     taxonomy_standard: str = Field(
         ...,
         description="Taxonomic classification standard.",
         json_schema_extra={"example": "WRB 2022"},
     )
-    class_symbol: str = Field(
-        ...,
-        description="Taxonomic class identifier code.",
-        json_schema_extra={"example": "LV"},
-    )
     class_name: str = Field(
         ...,
         description="Taxonomic class description name.",
         json_schema_extra={"example": "Luvisols"},
     )
-    wrb4_code: str | None = Field(
-        None, description="WRB 4th Edition classification code."
-    )
     wrb4_name: str | None = Field(
         None, description="WRB 4th Edition classification name."
-    )
-    wrb2_code: str | None = Field(
-        None, description="WRB 2nd Edition classification code."
     )
     wrb2_name: str | None = Field(
         None, description="WRB 2nd Edition classification name."
     )
-    fao90_code: str | None = Field(
-        None, description="FAO 1990 classification code."
-    )
     fao90_name: str | None = Field(
         None, description="FAO 1990 classification name."
-    )
-    wrb_phase_code: str | None = Field(
-        None, description="WRB soil phase identifier code."
     )
     wrb_phase_name: str | None = Field(
         None, description="WRB soil phase name description."
     )
-    dominant_group_code: str | None = Field(
-        None, description="Dominant soil classification group code."
-    )
     national_classification: str | None = Field(
         None, description="National soil classification system descriptor."
     )
+    codes: SoilClassificationCodes = Field(..., description="Grouped raw taxonomic codes.")
 
 
-class HydrologicContextSchema(BaseModel):
-    """Hydrologic soil attributes schema."""
+class HydrologicContextCodes(BaseModel):
+    """Raw hydrologic codes."""
 
     drainage: str | None = Field(
         None,
@@ -130,8 +147,27 @@ class HydrologicContextSchema(BaseModel):
     )
 
 
-class LandLimitationsSchema(BaseModel):
-    """Agronomic and physical growth limitations."""
+class HydrologicContextSchema(BaseModel):
+    """Hydrologic soil attributes schema representing scientific descriptions."""
+
+    drainage_description: str | None = Field(
+        None,
+        description="Resolved scientific description of natural soil drainage.",
+        json_schema_extra={"example": "Well drained"},
+    )
+    water_regime_description: str | None = Field(
+        None,
+        description="Resolved scientific description of water regime characteristics.",
+    )
+    impermeable_layer_description: str | None = Field(
+        None,
+        description="Resolved scientific description of impermeable layer depth constraint.",
+    )
+    codes: HydrologicContextCodes = Field(..., description="Grouped raw hydrologic codes.")
+
+
+class LandLimitationsCodes(BaseModel):
+    """Raw limitation codes."""
 
     root_depth: int | None = Field(
         None,
@@ -160,8 +196,29 @@ class LandLimitationsSchema(BaseModel):
     )
 
 
-class SoilTextureSchema(BaseModel):
-    """Soil layer texture schema."""
+class LandLimitationsSchema(BaseModel):
+    """Agronomic and physical growth limitations representing scientific descriptions."""
+
+    root_depth_description: str | None = Field(
+        None, description="Scientific description of root depth accessibility."
+    )
+    root_obstacles_description: str | None = Field(
+        None, description="Scientific description of root obstacles."
+    )
+    phase1_description: str | None = Field(
+        None, description="Scientific description of phase limitation 1."
+    )
+    phase2_description: str | None = Field(
+        None, description="Scientific description of phase limitation 2."
+    )
+    additional_property_description: str | None = Field(
+        None, description="Scientific description of additional property modifier."
+    )
+    codes: LandLimitationsCodes = Field(..., description="Grouped raw limitation codes.")
+
+
+class SoilTextureCodes(BaseModel):
+    """Raw texture codes."""
 
     usda_texture: int | None = Field(
         None,
@@ -173,6 +230,18 @@ class SoilTextureSchema(BaseModel):
         description="Soil texture class identifier based on SOTER standard.",
         json_schema_extra={"example": "M"},
     )
+
+
+class SoilTextureSchema(BaseModel):
+    """Soil layer texture schema representing scientific descriptions."""
+
+    usda_texture_description: str | None = Field(
+        None, description="Scientific description of USDA texture class."
+    )
+    soter_texture_description: str | None = Field(
+        None, description="Scientific description of SOTER texture class."
+    )
+    codes: SoilTextureCodes = Field(..., description="Grouped raw texture codes.")
 
 
 class PhysicalPropertiesSchema(BaseModel):
@@ -345,6 +414,7 @@ class SoilLayerSchema(BaseModel):
     properties: list[SoilPropertySchema] = Field(
         ...,
         description="Chemical and physical property values list (backward compatible).",
+        deprecated="Deprecated: Use 'measurements' instead. Planned for removal in API version 2.",
     )
     texture: SoilTextureSchema | None = Field(
         None, description="Texture codes for this layer depth."

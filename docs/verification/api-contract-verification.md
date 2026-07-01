@@ -33,30 +33,35 @@ The REST API exposes the following public endpoints:
 
 The API request parameters and response payload JSON schemas are defined to represent **pure scientific concepts** and remain strictly decoupled from the internal SQLite schemas.
 
-### Response Hierarchy (No Flattening)
-The output JSON response follows the logical structure of the soil science domain models:
+#### Response Hierarchy (No Flattening)
+The output JSON response follows the logical structure of the soil science domain models, grouping raw coded values under nested `codes` objects:
 ```
 SoilObservation
  ├── coordinate (Latitude, Longitude)
  ├── environmental_context (Koppen Climate)
- ├── metadata (Coverage code, WRB Library ID, Data Source provenance, version, reference IDs)
+ ├── metadata (Provenance and database descriptions)
+ │    └── codes (Raw coverage integer code)
  └── profiles (List of soil profiles making up the spatial mapping unit area)
       ├── composition_share (Percentage share of profile in area)
       ├── sequence_index (Rank sequence)
-      ├── classification (WRB 2022/2006, FAO 1990 taxonomy names, symbols, phases, national classes)
-      ├── hydrologic_context (Natural drainage ratings, regimes, impermeable layer depths)
-      ├── land_limitations (Rootable depths, obstacles, phase constraints, modifiers)
+      ├── classification (WRB 2022/2006, FAO 1990 taxonomy names, phases, national classes)
+      │    └── codes (Raw classification codes, class symbol, and WRB phases codes)
+      ├── hydrologic_context (Natural drainage, regimes, and impermeable layer descriptions)
+      │    └── codes (Raw drainage, water regime, and impermeable layer codes)
+      ├── land_limitations (Rootable depths, obstacles, phase constraints, and modifier descriptions)
+      │    └── codes (Raw root depth, obstacles, and phase limitation codes)
       └── layers (Depth intervals ordered top-to-bottom)
            ├── top_depth_cm & bottom_depth_cm
-           ├── properties (Legacy list of type/value/unit properties for backward compatibility)
-           ├── texture (USDA & SOTER texture classifications)
+           ├── properties (Legacy list of properties - DEPRECATED in favor of measurements)
+           ├── texture (USDA & SOTER texture descriptions)
+           │    └── codes (Raw USDA and SOTER texture codes)
            └── measurements (Hierarchical measurement tables)
                 ├── physical (Sand, Silt, Clay, Coarse fragments, Bulk density, Reference density)
                 ├── chemical (pH, Organic Carbon, Nitrogen, C:N ratio, CEC soil/clay, TEB, etc.)
                 └── hydraulic (Available water capacity)
 ```
 
-No database column names (like `KOPPEN` or `BOTDEP`) or SQL concepts leak into this contract.
+No database column names or raw schema structures leak into this contract. Legacy field `properties` is officially marked as deprecated in OpenAPI and is scheduled for complete removal in API version 2.
 
 ---
 
@@ -91,10 +96,11 @@ We analyzed the viability of replacing the underlying Harmonized World Soil Data
 ## 5. Versioning Strategy
 
 To support API evolution without breaking backward compatibility:
-1.  **URL Path Versioning**: The current unversioned root (`/soil`) acts as the stable endpoint. Major revisions in the future will introduce explicit prefix routing:
-    *   `/v1/soil` (Maps to the frozen Milestone 21 contract)
-    *   `/v2/soil` (To accommodate future model extensions if breaking changes are introduced)
-2.  **Compatibility Preservation**: The list of `properties` (tuples of `PropertyType`, `value`, `Unit`) has been retained in `SoilLayerSchema` to support legacy client decoders, alongside the newer structured `measurements` hierarchy.
+1.  **URL Path Versioning**: The API implements explicit URL path versioning:
+    *   `/v1/health` (Main version 1 health monitoring endpoint)
+    *   `/v1/soil` (Main version 1 soil coordinate query endpoint)
+2.  **Backward Compatibility Aliases**: Unversioned paths (`/health` and `/soil`) are retained as compatibility routing aliases mapped to version 1.
+3.  **Deprecation Schedule**: Legacy flat list `properties` has been marked as deprecated in OpenAPI schema definitions. Clients are encouraged to migrate to `measurements`. Planned removal is scheduled for API version 2.
 
 ---
 
