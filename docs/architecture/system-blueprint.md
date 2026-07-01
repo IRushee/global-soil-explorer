@@ -29,14 +29,14 @@ graph TD
 
         subgraph PR ["Plugin Registry System"]
             DP["Dataset Plugins"]
-            RP["Renderer Plugins"]
-            EP["Export Plugins"]
-            SP["Search Plugins"]
-            AP["Analysis Plugins"]
+            RP["Renderer Registry (MapLibre/Cesium/Leaflet)"]
+            EP["Export Engine Plugins"]
+            SP["Search Registry Providers"]
+            AP["Analysis Engine Plugins"]
             OP["Overlay Plugins"]
         end
 
-        ME["Map Engine Wrapper (MapLibre/Cesium/Leaflet)"]
+        ME["Map Engine Wrapper"]
     end
 
     %% Network Boundary
@@ -56,16 +56,16 @@ graph TD
     %% CDN and Edge Routing
     subgraph Edge ["Edge Infrastructure (Optional for Scale)"]
         CDN["CDN Cache (Cloudflare / CloudFront)"]
-        TS["Tile Service (Direct Vector/Raster tiles)"]
+        TS["Tile Service (Direct Vector/Raster tiles - Visualization-Centric)"]
     end
     CDN --> TS
 
     %% Backend Boundary
     subgraph Backend ["FastAPI Application Server"]
-        subgraph API ["API & Processing Boundary"]
+        subgraph API ["API & Processing Boundary (Observation-Centric)"]
             REST["REST API Endpoint Router"]
             BG["Background Worker Engine (Optional)"]
-            EQ["Export Jobs Queue (Optional)"]
+            EQ["Export Engine Queue (Optional)"]
             TG["On-The-Fly Tile Generator (Optional)"]
         end
 
@@ -81,7 +81,12 @@ graph TD
             AS["Application Service"]
             SL["Spatial Lookup Service"]
             REP["SQLite Repository"]
-            DA["Scientific Dataset Adapter (SoilGrids/SSURGO Translation)"]
+            DA["Scientific Dataset Translator (SoilGrids/SSURGO Translation)"]
+        end
+
+        subgraph Models ["Metadata Models"]
+            MAN["DatasetManifest Schema"]
+            CAP["DatasetCapabilities Schema"]
         end
         
         subgraph DOM ["Domain Model Layer"]
@@ -115,6 +120,8 @@ graph TD
     REP --> SQL
     REP --> LKP
     REP --> Obs
+    AS --> MAN
+    AS --> CAP
 ```
 
 ---
@@ -137,7 +144,7 @@ sequenceDiagram
     participant AS as Application Service
     participant SL as Spatial Lookup (Raster)
     participant Repo as SQLite Repository
-    participant DA as Scientific Dataset Adapter
+    participant DA as Scientific Dataset Translator
     participant Dom as Domain Models (SoilObservation)
 
     User->>UI: Clicks coordinate on Map
@@ -180,41 +187,23 @@ sequenceDiagram
 
 ---
 
-## 3. Physical Deployment Topology & Infrastructure Options
+## 3. Physical Deployment Topology & Decoupling
 
-To allow the platform to run easily on a single developer laptop (Local Stack) while maintaining architectural guidelines for high-load production scaling (Scale Stack), infrastructure components are divided into Required and Optional roles.
-
-### A. Minimal Stack (Required for local development and run-from-laptop)
-For default HWSD queries, static assets and coordinates querying route directly through the FastAPI backend to read SQLite and raster assets locally. No external caches or queues are required:
-
-```
-[ Browser / Client ] ──(REST Queries)──► [ FastAPI App (Uvicorn) ] ──► [ SQLite DB / Raster Files ]
-```
-
-### B. Scale Stack (Optional layers for high-load production environments)
-For large-scale vector tile serving and asynchronous analysis, static and vector tiles bypass the main FastAPI application server, routing directly to the dedicated Tile Service.
+The platform architecture enforces strict operational and structural decoupling between queries and visualizations:
+1.  **Scientific API (Observation-Centric)**: Handles precision location queries, profile assembly, and metadata attribution. Built on FastAPI and SQLite, it prioritizes analytical completeness.
+2.  **Tile Service (Visualization-Centric)**: Serves map tile protocols (raster/vector) for rendering geographical bounds. It is optimized for high-throughput map redraw cycles and relies heavily on CDN caches.
+3.  **Decoupling Rule**: The observation pipeline and tile render pipeline must remain physically and logically separated. They must never be coupled or share in-memory dependencies.
 
 ```mermaid
 graph TD
-    subgraph Client ["Client Devices"]
-        Browser["Web Browser Client"]
-    end
-
-    subgraph CDNLayer ["Distribution Layer (Optional)"]
-        CDN["Edge CDN (Cloudflare / CloudFront)"]
-    end
-
-    subgraph Core ["Minimal Stack (Required)"]
-        FastAPI["FastAPI App (REST API / Uvicorn)"]
-        DB["SQLite DB (hwsd.db)"]
-        Raster["Binary Raster (HWSD2.bil/.hdr)"]
-    end
-
-    subgraph ScaleServices ["Scale Stack (Optional)"]
-        TS["Tile Service (Static/Vector Tile Host)"]
-        Worker["Background Worker (Celery/RQ)"]
-        Redis["Redis (Jobs Queue & Rate Limiter)"]
-    end
+    Browser["Web Browser Client"]
+    CDN["Edge CDN (Cloudflare / CloudFront)"]
+    TS["Tile Service (Static/Vector Tile Host - Visualization-Centric)"]
+    FastAPI["FastAPI App (REST API / Uvicorn - Observation-Centric)"]
+    Worker["Background Worker (Celery/RQ)"]
+    Redis["Redis (Jobs Queue & Rate Limiter)"]
+    DB["SQLite DB (hwsd.db)"]
+    Raster["Binary Raster (HWSD2.bil/.hdr)"]
 
     Browser -- "HTTPS" --> CDN
     CDN -- "Vector / Static Tiles" --> TS
@@ -227,15 +216,15 @@ graph TD
     TS --> Raster
 ```
 
-### C. Infrastructure Dependency Classification
+### A. Infrastructure Dependency Classification
 
-*   **Required Infrastructure**:
+*   **Required Infrastructure (Local Run)**:
     *   **FastAPI**: Server framework hosting the scientific API endpoints.
     *   **SQLite**: Databases layer housing attribute lookups and mapping layers data.
     *   **Raster Files (`.bil` / `.hdr`)**: Georeferenced cell rasters holding spatial indices.
 *   **Optional Infrastructure (Production Scaling)**:
     *   **CDN (Content Delivery Network)**: Caches static tile files and REST queries close to users.
-    *   **Tile Service (Tile Server)**: Serves map tile protocols (e.g., MVT vector tiles) directly without routing through the REST API.
+    *   **Tile Service (Tile Server)**: Serves map tile protocols directly.
     *   **Redis**: Key-value data cache and background task broker.
     *   **Celery / RQ**: Asynchronous background workers managing long-running jobs (e.g. dynamic reports generation, bulk spatial clips).
     *   **Sentry / Prometheus**: Server observability, logging, and error tracking metrics.
@@ -268,7 +257,7 @@ To scale the query processing paths independently, queries are split into four d
 `User Pan/Zoom` → `Viewport Box Bounding` → `Service Worker Cache` → `CDN Tile Service` → `Map WebGL Rendering`
 
 ### B. Coordinate Pipeline (Scientific details)
-`Map Click` → `Coord Validation` → `TanStack Cache` → `REST API` → `Scientific Dataset Adapter` → `Zustand Store` → `Panel Display`
+`Map Click` → `Coord Validation` → `TanStack Cache` → `REST API` → `Scientific Dataset Translator` → `Zustand Store` → `Panel Display`
 
 ### C. Search Pipeline (Geocoding)
 `Search Bar Text` → `Debounce` → `Geocoder Provider` → `Location Autocomplete` → `Coordinate selected event`
@@ -285,7 +274,7 @@ To maintain backward compatibility as the system evolves, every layer interface 
 *   **REST API**: Versioned via URL path prefixes (e.g., `/v1/soil`). Legacy routes are retained as aliases.
 *   **Event Contracts**: Event payload schemas are versioned via the event envelope (e.g., `{ type: 'CoordinateSelected', version: '1.0', payload: { lat, lon } }`).
 *   **Plugin API**: The plugin registries validate provider interfaces on registration. Interface upgrades increment the plugin minor version.
-*   **Scientific Dataset Adapter Interface**: Backend adapters inherit versioned abstract base classes (e.g., `BaseDatasetAdapterV1`).
+*   **Scientific Dataset Translator Interface**: Backend adapters inherit versioned abstract base classes (e.g., `BaseDatasetAdapterV1`).
 *   **Export Schema**: Standardized export JSON schemas contain a metadata version string (`schema_version: "1.0"`).
 *   **Tile Schema**: MVT vector tile schemas define key names and properties inside standard versioned tile specifications (e.g., `v1/tile/{z}/{x}/{y}.mvt`).
 
@@ -341,6 +330,10 @@ graph TD
 
 To ensure study areas are driven completely by configuration data rather than hardcoded client logic, we establish a standardized metadata schema representing an active **StudyArea** entity.
 
+Eventually, the backend should expose this entity via standard endpoint controllers:
+*   `GET /v1/study-areas` (Returns list of active configured study areas)
+*   `GET /v1/study-areas/{id}` (Returns detailed metadata, coordinates bounds, projection details, and capability mappings)
+
 ### A. StudyArea Data Schema
 ```typescript
 interface StudyArea {
@@ -359,7 +352,7 @@ interface StudyArea {
 }
 ```
 
-By registering different `StudyArea` records (e.g. `India`, `Australia`, `Custom Grid`), the entire client map bounds, geocoders, and available data tabs adapt automatically.
+By registering different `StudyArea` records (e.g. `India`, `Australia`, `Custom Grid`), the entire client map bounds, geocoders, and available data tabs adapt automatically without custom code.
 
 ---
 
@@ -391,9 +384,9 @@ To prevent z-ordering layout collisions (where overlay polygons cover label text
 
 ---
 
-## 10. Information Panel Architecture
+## 10. Information Panel & Export Engine Architecture
 
-Because this platform centers primarily around **Scientific Observations**, the `ScientificInfoPanel` has a specialized, componentized layout hierarchy mapping to the scientific aggregate outputs:
+Because this platform centers primarily around **Scientific Observations**, the `ScientificInfoPanel` has a specialized, componentized layout hierarchy mapping to the scientific aggregate outputs. Exporting is handled via a dedicated **Export Engine**:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -419,15 +412,33 @@ Because this platform centers primarily around **Scientific Observations**, the 
 ├────────────────────────────────────────────────────────┤
 │  Related Datasets recommendation links                 │
 ├────────────────────────────────────────────────────────┤
-│  Export Toolbox (JSON, CSV, PDF, Share link triggers)  │
+│  Export Engine Panel (CSV, JSON, GeoJSON, PDF, PNG)   │
 └────────────────────────────────────────────────────────┘
 ```
 
+### A. Export Engine Layout
+The **Export Engine** exposes plugin-driven writers. Adding formats (e.g. `TIFF`, `Excel`) is managed via registration in the Export Registry:
+```typescript
+interface ExportEngine {
+  registerProvider(format: string, provider: ExportProvider): void;
+  executeExport(format: string, data: SoilObservation): Promise<ExportResult>;
+}
+```
+
+### B. Analysis Engine
+The **Analysis Engine** manages client and server spatial analysis operations, preventing script clutter:
+*   *Spatial Statistics*: Area calculations, averages.
+*   *Sampling*: Point queries extraction.
+*   *Raster Analysis*: Dynamic cell comparisons.
+*   *Profile Comparison*: Overlaying two profiles vertically.
+*   *Cross Sections*: Drawing a 2D line and generating soil depth profiles along the path.
+*   *Reports*: Generating summaries.
+
 ---
 
-## 11. Consolidated Search Providers Interface
+## 11. Search Registry Architecture
 
-All search types implement a unified search handler interface, enabling polymorphic geocoding and attribute lookup:
+To match the extensibility of the core Plugin Registry, search providers are managed by a central **Search Registry**:
 
 ```typescript
 interface SearchResultItem {
@@ -444,15 +455,17 @@ interface SearchProvider {
   name: string;
   search(query: string, bounds?: [[number, number], [number, number]]): Promise<SearchResultItem[]>;
 }
+
+class SearchRegistry extends ExtensionRegistry<string, SearchProvider> {}
 ```
 
-The Search Module coordinates registry lookups across standard search adapter implementations:
-*   `CoordinateSearchProvider`: Parses decimal/DMS notation coordinates.
-*   `LocationSearchProvider`: Queries external Nominatim/Mapbox geocoders.
+The standard search provider implementations register dynamically:
+*   `CoordinateSearchProvider`: Parses decimal/DMS coordinates.
+*   `LocationSearchProvider` (Geocoder): Queries external Nominatim/Mapbox APIs.
 *   `ScientificAttributeSearchProvider`: Scans taxonomies (e.g. "Luvisols").
-*   `DatasetSearchProvider`: Searches available layers (e.g. "clay").
-*   `BookmarkSearchProvider`: Checks user's annotated bookmarks list.
-*   `HistorySearchProvider`: Searches local history logs store.
+*   `DatasetSearchProvider`: Searches active map layers.
+*   `BookmarkSearchProvider`: Checks user's annotated bookmarks.
+*   `HistorySearchProvider`: Searches locally saved search queries.
 
 ---
 
@@ -516,3 +529,96 @@ Security configurations enforce a strict client-side role hierarchy to govern ac
 | **`Dataset Manager`** | Researcher + Upload datasets, update metadata lookups | Access data manager control panel screens |
 | **`Plugin Developer`**| Researcher + Register custom providers, inspect metrics | Access developer plugin register tab, inspect logs |
 | **`Administrator`** | All permissions (Full system override access) | Unlock full application config console panel |
+
+---
+
+## 16. Scientific Observation Lifecycle Diagram
+
+This lifecycle flowchart represents the central operational sequence of the entire Global Soil Explorer platform. Every spatial query, visualization, and export follows this path:
+
+```
+[ Step 1: Coordinate Trigger ] (Map click / Coordinate search / GPS locator)
+            │
+            ▼
+[ Step 2: Validation Layer ] (Verify coordinate format, bounding bounds check)
+            │
+            ▼
+[ Step 3: Spatial Resolution ] (Seek georeferenced bil raster to extract SMU index key)
+            │
+            ▼
+[ Step 4: Dataset Translation ] (Scientific Dataset Translator maps raw values to standard domains)
+            │
+            ▼
+[ Step 5: Domain Construction ] (Assemble SoilObservation aggregate root, enforce invariants)
+            │
+            ▼
+[ Step 6: API Serialization ] (Filter internal keys; serialize schemas to clean scientific JSON)
+            │
+            ▼
+[ Step 7: Frontend Mapping ] (Adapter matches REST JSON payload to standardized client-side interfaces)
+            │
+            ▼
+[ Step 8: Scientific Display ] (Zustand updates; Recharts displays vertical depth profiles)
+            │
+            ▼
+[ Step 9: Export / Analysis ] (Trigger PDF report compile, GeoJSON export, or Turf clip query)
+```
+
+---
+
+## 17. Dataset Manifest & Capabilities Model
+
+Rather than scattering dataset configurations across various static files, every registered database is backed by a unified **DatasetManifest** model. This is combined with the **DatasetCapabilities** model to drive the UI dynamically.
+
+### A. DatasetManifest Schema (Metadata Backbone)
+```typescript
+interface DatasetManifest {
+  id: string;                         // Unique dataset code (e.g., "hwsd_v2")
+  name: string;                       // Clean scientific dataset name
+  version: string;                    // Release version identifier
+  provider: string;                   // Institution responsible for dataset
+  license: string;                    // Data usage rights (e.g. "CC-BY-4.0")
+  citation: string;                   // Academic citation standard string
+  projection: string;                 // Source raster georeference projection
+  coverage: string;                   // Geographic bounds description
+  resolution: string;                 // Cell resolution (e.g., "30 arc-seconds")
+  depthIntervals: { top: number; bottom: number }[]; // Supported layer slices
+  availableProperties: string[];      // Chemical / physical property columns available
+  availableLayers: string[];          // List of map overlay layers generated
+  lastUpdated: string;                // UTC timestamp of persistence generation
+  supportedExports: string[];         // Export formats validated
+  colorScheme: Record<string, string>; // Colors mappings for taxonomy renders
+  studyAreas: string[];               // Associated Study Area configuration IDs
+}
+```
+
+### B. DatasetCapabilities Model (Shared Backend & Frontend Model)
+Both the backend REST API responses and frontend stores use this model to identify which queries are supported:
+```typescript
+interface DatasetCapabilities {
+  supportsProfiles: boolean;       // Resolves to multiple component profile structures?
+  supportsLayers: boolean;         // Supports distinct soil layer depths?
+  supportsTexture: boolean;        // Renders USDA/SOTER texture classifications?
+  supportsChemistry: boolean;      // Renders chemical measurement ranges?
+  supportsHydrology: boolean;      // Renders drainage/impermeable layer context?
+  supportsRaster: boolean;         // Has raster overlay layers?
+  supportsVectorTiles: boolean;    // Has vector overlay layers?
+  supportsOffline: boolean;        // Validated for local cache fieldwork queries?
+  supportsSearch: boolean;         // Has searchable taxonomic attributes?
+  supportsExport: boolean;         // Can export observation records?
+}
+```
+
+### C. Renderer Capabilities Model
+The frontend Renderer Registry queries this model to select the appropriate engine (MapLibre, Cesium, Leaflet, OpenLayers) dynamically:
+```typescript
+interface RendererCapabilities {
+  supportsVectorTiles: boolean;
+  supportsRaster: boolean;
+  supports3D: boolean;
+  supportsTerrain: boolean;
+  supportsOffline: boolean;
+  supportsOpacity: boolean;
+  supportsAnimation: boolean;
+}
+```
