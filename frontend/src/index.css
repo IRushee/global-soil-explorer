@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Base layout resets */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Custom dark theme mappings matching design guidelines */
+.bg-slate-850 {
+  background-color: #1e293b;
+}
+
+.text-slate-450 {
+  color: #94a3b8;
+}
