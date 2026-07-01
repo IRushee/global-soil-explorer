@@ -59,8 +59,13 @@ Welcome to the architectural documentation for the Global Soil Explorer. This di
 *   **Documentation**:
     *   [System Blueprint Deployment Section](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/system-blueprint.md#3-physical-deployment-topology) - Visual overview of network edges, tile servers, and backend worker queues.
 
-### 10. Architectural Decision Records (ADRs)
-*   **Overview**: Permanent record of critical design choices.
+### 10. Extension Points
+*   **Overview**: Swappable plugin interfaces and customization bounds.
+*   **Documentation**:
+    *   [Frontend Extension Points](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/frontend-extension-points.md) - Domain Adapters, Workspace persistence, Turf analysis tools, and Plugin Registries.
+
+### 11. ADRs
+*   **Overview**: Architecture Decision Records detailing domains, database structures, type safety, and contracts isolation rules.
 *   **Documentation**:
     *   [ADR-001: Domain Model Purity](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-001-domain-model-purity.md)
     *   [ADR-002: Spatial Lookup Architecture](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-002-spatial-lookup-architecture.md)
@@ -72,7 +77,13 @@ Welcome to the architectural documentation for the Global Soil Explorer. This di
     *   [ADR-008: Backend Contracts are Dataset-Independent](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-008-backend-contracts-are-dataset-independent.md)
     *   [ADR-009: Response Models Never Expose Persistence Concepts](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-009-response-models-never-expose-persistence-concepts.md)
 
-### 11. System Blueprint
+### 12. System Blueprint
 *   **Overview**: Consolidating diagrams for physical deployment, sequential querying, caching boundaries, and app lifecycles.
 *   **Documentation**:
     *   [System Blueprint](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/system-blueprint.md) - Master reference.
+
+### 13. Verification Documents
+*   **Overview**: Audits, verification reports, and baseline validation benchmarks.
+*   **Documentation**:
+    *   [API Contract Verification](file:///Users/rushee/Projects/global-soil-explorer/docs/verification/api-contract-verification.md) - Performance metrics, payload benchmarks, and serialization latency audits.
+

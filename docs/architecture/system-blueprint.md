@@ -622,3 +622,219 @@ interface RendererCapabilities {
   supportsAnimation: boolean;
 }
 ```
+
+---
+
+## 18. Configuration Architecture (ConfigurationService)
+
+To ensure the application has a single source of truth for runtime behaviors and environment rules, all components (excluding base infrastructure bootstrap code) query an injectable **ConfigurationService**.
+
+### A. Contract Interface
+```typescript
+interface AppConfiguration {
+  environment: 'development' | 'production' | 'test';
+  activeStudyAreaId: string;
+  activeDatasetId: string;
+  activeRendererId: string;
+  enabledPlugins: string[];
+  featureFlags: Record<string, boolean>;
+  apiBaseUrl: string;
+  tileBaseUrl: string;
+}
+
+interface ConfigurationService {
+  get(): AppConfiguration;
+  isFeatureEnabled(flagName: string): boolean;
+  updateActiveStudyArea(studyAreaId: string): void;
+  updateActiveDataset(datasetId: string): void;
+}
+```
+*   **Decoupling Policy**: Direct calls to `process.env` or browser `window.config` are strictly prohibited within application modules. The service abstracts the physical storage (environment variables on the backend, remote config or session stores on the client).
+
+---
+
+## 19. Compile-Time Dependency Graph
+
+The system adheres strictly to the Clean Architecture layout. Dependency rules dictate that **compile-time references must always point inward** toward the core scientific domain definitions:
+
+```
+ ┌────────────────────────────────────────────────────────┐
+ │                      REST API Layer                     │
+ └──────────────────────────┬─────────────────────────────┘
+                            │ imports
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │                    Application Layer                   │
+ └──────────────────────────┬─────────────────────────────┘
+                            │ imports
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │                     Contracts Layer                    │
+ └──────────────────────────┬─────────────────────────────┘
+                            │ imports
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │                      Domain Layer                      │
+ └────────────────────────────────────────────────────────┘
+                            ▲
+                            │ imports
+ ┌──────────────────────────┴─────────────────────────────┐
+ │                Scientific Dataset Translator           │
+ └──────────────────────────▲─────────────────────────────┘
+                            │ imports
+ ┌──────────────────────────┴─────────────────────────────┐
+ │                  Repository (SQLite)                   │
+ └────────────────────────────────────────────────────────┘
+```
+
+*   **Purity Check**: The `Domain` has zero external dependencies. The `Application` boundary only imports interfaces from the `Contracts` and models from the `Domain`.
+
+---
+
+## 20. System Extension Boundaries
+
+To maintain a highly stable core while supporting rapid growth, the platform enforces strict layer categorization:
+
+*   **Core Core (Frozen / High Stability)**:
+    *   `Domain`: Soil models and units checks.
+    *   `Contracts`: Interface contracts.
+    *   `Application`: Service managers.
+    *   `REST API`: Endpoints schema and routing structures.
+*   **Extension Layer (Plugin Driven / Swappable)**:
+    *   `Dataset Translators`: Concrete translators (e.g. `HWSDTranslator`, `SoilGridsTranslator`).
+    *   `Renderers`: Concrete adapters (e.g. `MapLibreRenderer`, `CesiumRenderer`).
+    *   `Search Providers`: Standard geocoders.
+    *   `Export Providers`: Data format writers (CSV, PDF).
+    *   `Analysis Providers`: Turf tools.
+*   **Infrastructure (External / Configuration-Only)**:
+    *   `SQLite`: Data file storage.
+    *   `Raster Files`: Georeference grids.
+    *   `Tile Server` / `CDN` / `Redis`: Caching and distribution.
+
+---
+
+## 21. Interface Compatibility Policy
+
+Interfaces and endpoints are classified to direct maintenance priority:
+
+1.  **Stable (Guaranteed compatibility across Minor updates)**:
+    *   `REST API v1`
+    *   `Event Contracts v1`
+    *   `Plugin Interface Contracts`
+    *   `Dataset Translator Interface`
+2.  **Experimental (Subject to change in minor revisions)**:
+    *   `Workspaces Schema`
+    *   `Offline Synchronization protocols`
+    *   `Analysis Engine Interface extensions`
+3.  **Future (Planned roadmaps, no present code)**:
+    *   `GraphQL Queries`
+    *   `3D Globe rendering`
+    *   `Temporal / Time-series dataset schemas`
+
+---
+
+## 22. Dataset Registration & Workspace Lifecycles
+
+These lifecycles define structural steps for runtime additions.
+
+### A. Dataset Registration Lifecycle
+```
+[ Step 1: Ingest Manifest ] ──► (Verify DatasetManifest JSON structure)
+            │
+            ▼
+[ Step 2: Validate Capabilities ] ──► (Verify schema maps to DatasetCapabilities)
+            │
+            ▼
+[ Step 3: Register Translator ] ──► (Register translator instance in the Plugin Registry)
+            │
+            ▼
+[ Step 4: Register Map Layer ] ──► (Append TileEndpoint definitions to Overlay Registry)
+            │
+            ▼
+[ Step 5: Warm Cache ] ──► (Pre-warm low-resolution raster offsets in memory)
+            │
+            ▼
+[ Step 6: Mark Active ] ──► (Set active status in Zustand, trigger UI component repaint)
+```
+
+### B. Workspace Lifecycle
+```
+[ Step 1: Workspace Init ] ──► (Assign UUID, mount Workspace state store)
+            │
+            ▼
+[ Step 2: Bookmark Coordinates ] ──► (Store point annotations and queries parameters)
+            │
+            ▼
+[ Step 3: Save Projects ] ──► (Store layout configurations and active overlays)
+            │
+            ▼
+[ Step 4: Add Observations ] ──► (Collect vertical horizon measurements and charts data)
+            │
+            ▼
+[ Step 5: Export / Share ] ──► (Download Workspace as JSON, or generate Share link)
+```
+
+---
+
+## 23. System-Wide Error Taxonomy
+
+Error management follows a strict class hierarchy to ensure proper reporting:
+
+```
+                             Exception
+                                 │
+                     ┌───────────┴───────────┐
+                     ▼                       ▼
+                DomainError          InfrastructureError
+                     │                       │
+           ┌─────────┴─────────┐       ┌─────┴────────┐
+           ▼                   ▼       ▼              ▼
+    ValidationError      DatasetError  RepositoryError PluginError
+                                                      │
+                                               ┌──────┴──────┐
+                                               ▼             ▼
+                                         RendererError  ExportError
+```
+
+*   **Ownership & Action Matrix**:
+    *   `ValidationError`: Owned by API/Frontend routers. Action: Return HTTP 400.
+    *   `RepositoryError` / `InfrastructureError`: Owned by backend database layers. Action: Log tracebacks, return HTTP 503.
+    *   `PluginError`: Owned by Plugin Registry. Action: Disable faulty plugin, trigger user notification toast.
+
+---
+
+## 24. Feature Flag Specification
+
+All features subject to rollout constraints are governed by configuration flags in the `ConfigurationService`:
+
+*   **`FLAG_ANALYSIS_TOOLS`**: Unlocks draw bounds, Turf.js profile clips, and statistics charts.
+*   **`FLAG_OFFLINE_MODE`**: Enables service worker cache indicators and local persistence.
+*   **`FLAG_TERRAIN_3D`**: Mounts 3D relief layers in compatible renderers.
+*   **`FLAG_EXPORT_PDF`**: Unlocks PDF reports compilation.
+*   **`FLAG_WORKSPACES`**: Enables bookmarks and project saving UI panels.
+
+---
+
+## 25. Observability Metrics Specification
+
+For production tuning, the telemetry layer (OpenTelemetry + Prometheus) tracks these specific metrics:
+
+1.  **`coordinate_query_latency_ms`**: Latency of coordinates seek.
+2.  **`repository_query_latency_ms`**: Database SQL query latency.
+3.  **`dataset_translation_latency_ms`**: Processing duration in Scientific Dataset Translator.
+4.  **`api_e2e_latency_ms`**: End-to-end REST endpoint duration.
+5.  **`tile_request_latency_ms`**: Server-side raster tile generator render latency.
+6.  **`cache_hit_ratio`**: Hits/Misses ratio across L2, L3, and L5 caches.
+7.  **`plugin_failure_count`**: Counter tracking caught plugin exceptions.
+8.  **`export_job_duration_seconds`**: Duration of files compile.
+
+---
+
+## 26. Trust & Data Access Boundaries
+
+Data access boundaries enforce strict sandbox isolation rules:
+
+*   **User Browser Sandbox**: Client-side code runs within the browser sandbox, interacting only via public REST APIs and Tile endpoints.
+*   **Application Boundary**: The application service holds no direct filesystem access. It communicates exclusively with SQLite repositories and Spatial Lookup services.
+*   **Database Isolation Boundary**: Only the concrete `SQLiteRepository` has read access to SQLite files and tables. Only the `SpatialLookupService` reads `.bil` and `.hdr` files.
+*   **Domain Purity**: Domain models hold no reference to databases, adapters, or serializers. They are constructed strictly by translators.
