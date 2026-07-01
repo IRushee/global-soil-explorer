@@ -25,10 +25,14 @@ export interface SelectionSlice {
   activeObservation: SoilObservation | null
   loading: boolean
   error: string | null
+  activeProfileIndex: number
+  activeLayerIndex: number | null
   setSelectedCoordinate: (coord: Coordinate | null) => void
   setActiveObservation: (obs: SoilObservation | null) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
+  setActiveProfileIndex: (index: number) => void
+  setActiveLayerIndex: (index: number | null) => void
 }
 
 export interface LayoutSlice {
@@ -97,10 +101,14 @@ export const useGlobalStore = create<GlobalStoreState>((set) => ({
   activeObservation: null,
   loading: false,
   error: null,
+  activeProfileIndex: 0,
+  activeLayerIndex: null,
   setSelectedCoordinate: (selectedCoordinate) => set({ selectedCoordinate }),
   setActiveObservation: (activeObservation) => set({ activeObservation }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+  setActiveProfileIndex: (activeProfileIndex) => set({ activeProfileIndex }),
+  setActiveLayerIndex: (activeLayerIndex) => set({ activeLayerIndex }),
 
   // LayoutSlice
   sidebarOpen: true,
