@@ -76,6 +76,14 @@ Welcome to the architectural documentation for the Global Soil Explorer. This di
     *   [ADR-007: FastAPI and Application Layer Isolation](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-007-fastapi-and-application-layer-isolation.md)
     *   [ADR-008: Backend Contracts are Dataset-Independent](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-008-backend-contracts-are-dataset-independent.md)
     *   [ADR-009: Response Models Never Expose Persistence Concepts](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-009-response-models-never-expose-persistence-concepts.md)
+    *   [ADR-010: ConfigurationService Architecture](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-010-configuration-service-architecture.md)
+    *   [ADR-011: First-Class Study Area Abstraction](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-011-first-class-study-area-abstraction.md)
+    *   [ADR-012: DatasetManifest Metadata Backbone](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-012-dataset-manifest-metadata-backbone.md)
+    *   [ADR-013: Plugin Registry System](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-013-plugin-registry-system.md)
+    *   [ADR-014: Scientific Dataset Translator Pattern](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-014-scientific-dataset-translator-pattern.md)
+    *   [ADR-015: Renderer Registry Interface](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-015-renderer-registry-interface.md)
+    *   [ADR-016: Feature Flags Specification](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-016-feature-flags-specification.md)
+    *   [ADR-017: Search Registry Abstraction](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/adr/adr-017-search-registry-abstraction.md)
 
 ### 12. System Blueprint
 *   **Overview**: Consolidating diagrams for physical deployment, sequential querying, caching boundaries, and app lifecycles.
@@ -86,4 +94,6 @@ Welcome to the architectural documentation for the Global Soil Explorer. This di
 *   **Overview**: Audits, verification reports, and baseline validation benchmarks.
 *   **Documentation**:
     *   [API Contract Verification](file:///Users/rushee/Projects/global-soil-explorer/docs/verification/api-contract-verification.md) - Performance metrics, payload benchmarks, and serialization latency audits.
+    *   [Architecture Freeze Report](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/architecture-freeze-report.md) - Sign-off documentation and freeze declarations.
+
 
