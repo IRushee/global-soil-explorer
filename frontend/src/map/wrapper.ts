@@ -90,12 +90,15 @@ export class MapLibreRenderer implements MapRenderer {
         ? (BASEMAP_STYLES[options.style] || BASEMAP_STYLES['satellite'])
         : (options.style || BASEMAP_STYLES['satellite'])
 
+      const bounds = options.maxBounds
+      const isGlobal = bounds && bounds[0][0] <= -180 && bounds[1][0] >= 180
+
       this.mapInstance = new maplibregl.Map({
         container: containerId,
         style: resolvedStyle,
         center: options.center,
         zoom: options.zoom,
-        maxBounds: options.maxBounds,
+        maxBounds: isGlobal ? undefined : bounds,
         trackResize: true,
       })
 
