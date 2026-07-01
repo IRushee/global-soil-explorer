@@ -12,6 +12,16 @@ class SoilClassification:
     taxonomy_standard: str
     class_symbol: str
     class_name: str
+    wrb4_code: str | None = None
+    wrb4_name: str | None = None
+    wrb2_code: str | None = None
+    wrb2_name: str | None = None
+    fao90_code: str | None = None
+    fao90_name: str | None = None
+    wrb_phase_code: str | None = None
+    wrb_phase_name: str | None = None
+    dominant_group_code: str | None = None
+    national_classification: str | None = None
 
     def __post_init__(self) -> None:
         """Validate type and content invariants without coercion."""
@@ -36,3 +46,20 @@ class SoilClassification:
             raise InvalidClassificationError(
                 "class_name cannot be empty or whitespace."
             )
+
+        # 3. Optional taxonomic fields validation
+        for field_name in (
+            "wrb4_code",
+            "wrb4_name",
+            "wrb2_code",
+            "wrb2_name",
+            "fao90_code",
+            "fao90_name",
+            "wrb_phase_code",
+            "wrb_phase_name",
+            "dominant_group_code",
+            "national_classification",
+        ):
+            val = getattr(self, field_name)
+            if val is not None and not isinstance(val, str):
+                raise InvalidClassificationError(f"{field_name} must be a string.")

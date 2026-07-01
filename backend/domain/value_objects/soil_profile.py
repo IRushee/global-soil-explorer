@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from backend.domain.constants import MAX_PERCENTAGE, MIN_PERCENTAGE
 from backend.domain.exceptions import InvalidProfileError
+from backend.domain.value_objects.hydrologic_context import HydrologicContext
+from backend.domain.value_objects.land_limitations import LandLimitations
 from backend.domain.value_objects.soil_classification import SoilClassification
 from backend.domain.value_objects.soil_layer import SoilLayer
 
@@ -16,9 +18,21 @@ class SoilProfile:
     layers: tuple[SoilLayer, ...]
     classification: SoilClassification
     composition_share: float | None = None
+    hydrologic_context: HydrologicContext | None = None
+    land_limitations: LandLimitations | None = None
+    sequence_index: int | None = None
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: PLR0912
         """Validate type and layer stack invariants without coercion."""
+        # Validate sequence_index
+        if self.sequence_index is not None:
+            if not isinstance(self.sequence_index, int) or isinstance(
+                self.sequence_index, bool
+            ):
+                raise InvalidProfileError("sequence_index must be an integer.")
+            if self.sequence_index < 0:
+                raise InvalidProfileError("sequence_index must be non-negative.")
+
         # 1. Type validation for layers
         if not isinstance(self.layers, (tuple, list)):
             raise InvalidProfileError(
@@ -49,16 +63,13 @@ class SoilProfile:
 
         # 4. Validation for composition_share
         if self.composition_share is not None:
-            if (
-                not isinstance(self.composition_share, (int, float))
-                or isinstance(self.composition_share, bool)
+            if not isinstance(self.composition_share, (int, float)) or isinstance(
+                self.composition_share, bool
             ):
                 raise InvalidProfileError("composition_share must be a numeric value.")
 
             # Coerce to float
-            object.__setattr__(
-                self, "composition_share", float(self.composition_share)
-            )
+            object.__setattr__(self, "composition_share", float(self.composition_share))
 
             if not math.isfinite(self.composition_share):
                 raise InvalidProfileError("composition_share must be a finite number.")
@@ -80,6 +91,21 @@ class SoilProfile:
                 raise InvalidProfileError(
                     f"Layers overlap or are out of order: layer {i} "
                     f"(bottom: {current_layer.bottom_depth_cm} cm) "
-                    f"is deeper than layer {i+1} "
+                    f"is deeper than layer {i + 1} "
                     f"(top: {next_layer.top_depth_cm} cm)."
                 )
+
+        # 6. Validate hydrologic_context and land_limitations
+        if self.hydrologic_context is not None and not isinstance(
+            self.hydrologic_context, HydrologicContext
+        ):
+            raise InvalidProfileError(
+                "hydrologic_context must be a HydrologicContext instance."
+            )
+
+        if self.land_limitations is not None and not isinstance(
+            self.land_limitations, LandLimitations
+        ):
+            raise InvalidProfileError(
+                "land_limitations must be a LandLimitations instance."
+            )

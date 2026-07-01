@@ -16,7 +16,7 @@ def test_pipeline_orchestrator_success(tmp_path: Path) -> None:
     out_dir = tmp_path / "out"
     out_dir.mkdir()
 
-    hdr_content = "ncols          5\n" "nrows          10\n" "nbits          16\n"
+    hdr_content = "ncols          5\nnrows          10\nnbits          16\n"
     (raw_dir / "hwsd.hdr").write_text(hdr_content)
     (raw_dir / "hwsd.prj").write_text("WGS84")
     (raw_dir / "hwsd.mdb").write_text("mdb content")
@@ -29,9 +29,7 @@ def test_pipeline_orchestrator_success(tmp_path: Path) -> None:
         mock_reader = MagicMock()
         mock_reader_cls.return_value = mock_reader
         mock_reader.list_tables.return_value = ["D_WRB2"]
-        mock_reader.read_table.return_value = [
-            {"CODE": "AC", "Value": "Acrisols"}
-        ]
+        mock_reader.read_table.return_value = [{"CODE": "AC", "Value": "Acrisols"}]
         mock_reader.primary_keys = {"d_wrb2": "code"}
         mock_reader._schema = {"d_wrb2": {"code": "text", "value": "text"}}
 

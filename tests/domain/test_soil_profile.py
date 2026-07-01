@@ -103,11 +103,8 @@ def test_invalid_layer_elements(
 
 def test_empty_layers(sample_classification: SoilClassification) -> None:
     """Verify that an empty layers sequence is rejected."""
-    with pytest.raises(
-        InvalidProfileError, match="must contain at least one layer"
-    ):
+    with pytest.raises(InvalidProfileError, match="must contain at least one layer"):
         SoilProfile(layers=(), classification=sample_classification)
-
 
 
 def test_invalid_classification_type(
@@ -144,7 +141,6 @@ def test_invalid_composition_share_types(
             classification=sample_classification,
             composition_share=True,
         )
-
 
 
 def test_non_finite_composition_share(

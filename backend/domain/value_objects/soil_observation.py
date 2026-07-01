@@ -4,6 +4,10 @@ from dataclasses import dataclass
 
 from backend.domain.exceptions import InvalidObservationError
 from backend.domain.value_objects.coordinate import Coordinate
+from backend.domain.value_objects.dataset_metadata import DatasetMetadata
+from backend.domain.value_objects.environmental_context import (
+    EnvironmentalContext,
+)
 from backend.domain.value_objects.soil_profile import SoilProfile
 
 
@@ -13,14 +17,14 @@ class SoilObservation:
 
     coordinate: Coordinate
     profiles: tuple[SoilProfile, ...]
+    environmental_context: EnvironmentalContext | None = None
+    metadata: DatasetMetadata | None = None
 
     def __post_init__(self) -> None:
         """Validate type and content invariants without coercion."""
         # 1. Coordinate type validation
         if not isinstance(self.coordinate, Coordinate):
-            raise InvalidObservationError(
-                "coordinate must be a Coordinate instance."
-            )
+            raise InvalidObservationError("coordinate must be a Coordinate instance.")
 
         # 2. Profiles collection validation
         if not isinstance(self.profiles, (tuple, list)):
@@ -55,3 +59,16 @@ class SoilObservation:
                     f"Duplicate profile reference detected at index {i}."
                 )
             seen_refs.add(ref_id)
+
+        # 5. Validate environmental_context and metadata
+        if self.environmental_context is not None and not isinstance(
+            self.environmental_context, EnvironmentalContext
+        ):
+            raise InvalidObservationError(
+                "environmental_context must be an EnvironmentalContext instance."
+            )
+
+        if self.metadata is not None and not isinstance(self.metadata, DatasetMetadata):
+            raise InvalidObservationError(
+                "metadata must be a DatasetMetadata instance."
+            )

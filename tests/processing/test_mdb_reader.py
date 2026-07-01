@@ -49,4 +49,3 @@ def test_mdb_reader_primary_keys() -> None:
     reader = MDBReader(MDB_PATH)
     assert reader.primary_keys.get("d_wrb2") == "code"
     assert reader.primary_keys.get("hwsd2_layers") == "id"
-

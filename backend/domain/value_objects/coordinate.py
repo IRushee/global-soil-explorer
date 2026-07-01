@@ -21,15 +21,13 @@ class Coordinate:
     def __post_init__(self) -> None:
         """Validate range and type invariants without coercion."""
         # 1. Type validation (reject boolean subclasses of int)
-        if (
-            not isinstance(self.latitude, (int, float))
-            or isinstance(self.latitude, bool)
+        if not isinstance(self.latitude, (int, float)) or isinstance(
+            self.latitude, bool
         ):
             raise InvalidCoordinateError("Latitude must be a numeric value.")
 
-        if (
-            not isinstance(self.longitude, (int, float))
-            or isinstance(self.longitude, bool)
+        if not isinstance(self.longitude, (int, float)) or isinstance(
+            self.longitude, bool
         ):
             raise InvalidCoordinateError("Longitude must be a numeric value.")
 

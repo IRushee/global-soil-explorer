@@ -42,12 +42,12 @@ class BILRasterSpatialLookupService(SpatialLookupService[int | None]):
         self._nodata = int(metadata.get("nodata", 65535))
 
         # Calculate grid boundaries
-        self._min_lon = float(
-            metadata.get("ulxmap", -179.995833333333)
-        ) - (self._xdim / 2.0)
-        self._max_lat = float(
-            metadata.get("ulymap", 89.9958333333333)
-        ) + (self._ydim / 2.0)
+        self._min_lon = float(metadata.get("ulxmap", -179.995833333333)) - (
+            self._xdim / 2.0
+        )
+        self._max_lat = float(metadata.get("ulymap", 89.9958333333333)) + (
+            self._ydim / 2.0
+        )
 
         # Open file handle and initialize mutex for thread-safe concurrent reads
         self._file = open(self._bil_path, "rb")

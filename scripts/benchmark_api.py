@@ -2,7 +2,6 @@
 
 import statistics
 import time
-from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -97,7 +96,7 @@ def format_results(res: dict[str, Any]) -> None:
         f"Max: {res['api']['max']:.3f} ms | "
         f"95th: {res['api']['p95']:.3f} ms"
     )
-    print(f"Breakdown:")
+    print("Breakdown:")
     print(f"  - FastAPI Overhead:  {res['fastapi_overhead']:.3f} ms")
     print(f"  - ApplicationService: {res['app_service']:.3f} ms")
     print(f"    - Spatial Lookup:  {res['spatial_lookup']:.3f} ms")

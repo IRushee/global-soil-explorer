@@ -71,9 +71,7 @@ def _validate_header_metadata(
         errors.append(f"Invalid nbands value in HDR: {nbands}")
 
 
-def _discover_files_in_directory(
-    dir_path: Path, errors: list[str]
-) -> dict[str, str]:
+def _discover_files_in_directory(dir_path: Path, errors: list[str]) -> dict[str, str]:
     """Discover required files in a directory and check for duplicates."""
     discovered: dict[str, str] = {}
     try:
@@ -100,9 +98,7 @@ def _discover_files_in_directory(
     return discovered
 
 
-def _check_files_readability(
-    discovered: dict[str, str], errors: list[str]
-) -> None:
+def _check_files_readability(discovered: dict[str, str], errors: list[str]) -> None:
     """Verify that discovered files (excluding the header) are readable."""
     for ext, path_str in discovered.items():
         if ext == "hdr":
@@ -157,9 +153,7 @@ def _validate_zip_archive(zip_path: Path) -> ValidationResult:
                 with zf.open(hdr_filename) as f:
                     hdr_content = f.read().decode("utf-8", errors="replace")
             except Exception as e:
-                errors.append(
-                    f"Failed to read HDR file '{hdr_filename}' in ZIP: {e}"
-                )
+                errors.append(f"Failed to read HDR file '{hdr_filename}' in ZIP: {e}")
                 return ValidationResult(
                     False,
                     tuple(errors),
@@ -273,9 +267,7 @@ def validate_hwsd_dataset(input_path: Path | str) -> ValidationResult:
     else:
         return ValidationResult(
             is_valid=False,
-            errors=(
-                f"Input path '{path}' is neither a directory nor a ZIP archive.",
-            ),
+            errors=(f"Input path '{path}' is neither a directory nor a ZIP archive.",),
             warnings=(),
             discovered_paths={},
             metadata={},

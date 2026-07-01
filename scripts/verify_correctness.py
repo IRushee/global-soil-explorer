@@ -226,17 +226,12 @@ def collect_coastline_pairs(
         ]:
             adj_lat = lat + dlat
             adj_lon = lon + dlon
-            if (
-                MIN_LAT <= adj_lat <= MAX_LAT
-                and MIN_LON <= adj_lon <= MAX_LON
-            ):
+            if MIN_LAT <= adj_lat <= MAX_LAT and MIN_LON <= adj_lon <= MAX_LON:
                 adj_coord = Coordinate(adj_lat, adj_lon)
                 try:
                     adj_smu = spatial_lookup.resolve(adj_coord)
                     if adj_smu is None:
-                        coastline_pairs.append(
-                            ((lat, lon), (adj_lat, adj_lon))
-                        )
+                        coastline_pairs.append(((lat, lon), (adj_lat, adj_lon)))
                         break
                 except Exception:
                     pass
@@ -249,11 +244,7 @@ def main() -> None:
     bil_path = RAW_RASTER_DIR / "HWSD2.bil"
     hdr_path = RAW_RASTER_DIR / "HWSD2.hdr"
 
-    if (
-        not bil_path.exists()
-        or not hdr_path.exists()
-        or not DB_PATH.exists()
-    ):
+    if not bil_path.exists() or not hdr_path.exists() or not DB_PATH.exists():
         print("Error: HWSD raw files or database missing.")
         sys.exit(1)
 
@@ -318,9 +309,7 @@ def main() -> None:
             ok1, msg1 = verify_land_coordinate(
                 client, repository, app_service, land_smu, land[0], land[1]
             )
-            ok2, msg2 = verify_ocean_coordinate(
-                client, app_service, ocean[0], ocean[1]
-            )
+            ok2, msg2 = verify_ocean_coordinate(client, app_service, ocean[0], ocean[1])
             total_checks += 2
             if ok1 and ok2:
                 passed_checks += 2

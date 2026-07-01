@@ -8,7 +8,7 @@ from backend.repository.sqlite_repository import (
     SQLiteSoilObservationRepository,
 )
 
-DB_PATH = Path("../data/output/hwsd.db")
+DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "output" / "hwsd.db"
 
 
 def test_repository_database_not_found() -> None:
@@ -50,7 +50,6 @@ def test_repository_successful_resolution() -> None:
     assert share is not None
     assert share > 0.0
 
-
     # Inspect layers within the profile
     assert len(profile.layers) > 0
     for layer in profile.layers:
@@ -64,5 +63,3 @@ def test_repository_successful_resolution() -> None:
             assert prop.value is not None
             # Values must be within valid physical bounds
             assert prop.value >= 0.0 or prop.property_type.value == "ph_water"
-
-

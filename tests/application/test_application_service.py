@@ -15,9 +15,8 @@ from backend.domain import (
     SoilLayer,
     SoilObservation,
     SoilProfile,
-    SoilProperty,
 )
-from backend.domain.exceptions import InvalidCoordinateError, InvalidObservationError
+from backend.domain.exceptions import InvalidCoordinateError
 from backend.repository.sqlite_repository import SQLiteSoilObservationRepository
 from backend.spatial.raster_lookup import BILRasterSpatialLookupService
 
@@ -43,9 +42,7 @@ def test_application_service_di_success() -> None:
     profile = SoilProfile(
         layers=(layer,), classification=classification, composition_share=100.0
     )
-    mock_obs = SoilObservation(
-        coordinate=Coordinate(0.0, 0.0), profiles=(profile,)
-    )
+    mock_obs = SoilObservation(coordinate=Coordinate(0.0, 0.0), profiles=(profile,))
 
     # 2. Setup mock dependencies
     mock_lookup = MagicMock(spec=SpatialLookupService)
@@ -187,9 +184,7 @@ class TestHWSDIntegration:
         hdr_path = RAW_RASTER_DIR / "HWSD2.hdr"
         self.lookup_service = BILRasterSpatialLookupService(bil_path, hdr_path)
         self.repository = SQLiteSoilObservationRepository(DB_PATH)
-        self.app_service = ApplicationService(
-            self.lookup_service, self.repository
-        )
+        self.app_service = ApplicationService(self.lookup_service, self.repository)
 
         yield
 
@@ -257,9 +252,7 @@ class TestHWSDIntegration:
         assert len(obs1.profiles) == len(obs2.profiles)
 
         for p1, p2 in zip(obs1.profiles, obs2.profiles):
-            assert (
-                p1.classification.class_symbol == p2.classification.class_symbol
-            )
+            assert p1.classification.class_symbol == p2.classification.class_symbol
             assert p1.composition_share == p2.composition_share
             assert len(p1.layers) == len(p2.layers)
 

@@ -10,7 +10,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 CREATE_TABLE_REGEX = (
-    r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?'
+    r"CREATE TABLE\s+(?:IF NOT EXISTS\s+)?"
     r'["\'](\w+)["\']\s*\n?\s*\((.*?)\)\s*;'
 )
 
@@ -29,7 +29,6 @@ class MDBReader:
             raise FileNotFoundError(f"MDB file not found: {self.mdb_path}")
         self.primary_keys: dict[str, str] = {}
         self._schema = self._parse_schema()
-
 
     def _parse_schema(self) -> dict[str, dict[str, str]]:
         """Parse database schema dynamically using mdb-schema."""
@@ -75,7 +74,6 @@ class MDBReader:
             )
         return schema
 
-
     def list_tables(self) -> list[str]:
         """List all tables available in the MDB database.
 
@@ -89,11 +87,7 @@ class MDBReader:
                 text=True,
                 check=True,
             )
-            tables = [
-                line.strip()
-                for line in proc.stdout.splitlines()
-                if line.strip()
-            ]
+            tables = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
             return tables
         except Exception as e:
             raise OSError(f"Failed to list tables in MDB: {e}") from e

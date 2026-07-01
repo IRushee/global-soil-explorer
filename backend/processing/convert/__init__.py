@@ -83,9 +83,7 @@ def generate_create_table_sql(
             'FOREIGN KEY("HWSD2_SMU_ID") REFERENCES "HWSD2_SMU"("HWSD2_SMU_ID")'
         )
 
-    return (
-        f'CREATE TABLE "{table_name}" (\n  ' + ",\n  ".join(cols_def) + "\n);"
-    )
+    return f'CREATE TABLE "{table_name}" (\n  ' + ",\n  ".join(cols_def) + "\n);"
 
 
 def _write_database(
@@ -112,9 +110,7 @@ def _write_database(
             # Empty table schema creation
             schema_info = reader._schema.get(table_name.lower(), {})
             pk = reader.primary_keys.get(table_name.lower())
-            create_sql = generate_create_table_sql(
-                table_name, schema_info, [], pk
-            )
+            create_sql = generate_create_table_sql(table_name, schema_info, [], pk)
             cursor.execute(create_sql)
             continue
 
@@ -122,17 +118,13 @@ def _write_database(
         schema_info = reader._schema.get(table_name.lower(), {})
         pk = reader.primary_keys.get(table_name.lower())
 
-        create_sql = generate_create_table_sql(
-            table_name, schema_info, columns, pk
-        )
+        create_sql = generate_create_table_sql(table_name, schema_info, columns, pk)
         cursor.execute(create_sql)
 
         # Bulk insert
         placeholders = ", ".join(["?"] * len(columns))
         cols_str = ", ".join([f'"{c}"' for c in columns])
-        insert_sql = (
-            f'INSERT INTO "{table_name}" ({cols_str}) VALUES ({placeholders})'
-        )
+        insert_sql = f'INSERT INTO "{table_name}" ({cols_str}) VALUES ({placeholders})'
 
         data_to_insert = []
         for r in rows:
@@ -214,9 +206,7 @@ def _validate_sqlite_database(
     cursor.execute("PRAGMA foreign_key_check")
     fk_violations = cursor.fetchall()
     if fk_violations:
-        raise ValueError(
-            f"Foreign key integrity check failed: {fk_violations}"
-        )
+        raise ValueError(f"Foreign key integrity check failed: {fk_violations}")
 
     # 5. Database size check
     db_size = db_path.stat().st_size
@@ -261,12 +251,8 @@ def convert_database(context: PreprocessingContext) -> None:
     conn_b = sqlite3.connect(str(temp_db_path))
 
     for tname in reader.list_tables():
-        count_a = conn_a.execute(f'SELECT COUNT(*) FROM "{tname}"').fetchone()[
-            0
-        ]
-        count_b = conn_b.execute(f'SELECT COUNT(*) FROM "{tname}"').fetchone()[
-            0
-        ]
+        count_a = conn_a.execute(f'SELECT COUNT(*) FROM "{tname}"').fetchone()[0]
+        count_b = conn_b.execute(f'SELECT COUNT(*) FROM "{tname}"').fetchone()[0]
         if count_a != count_b:
             raise ValueError(
                 f"Reproducibility check failed: row count mismatch in '{tname}'"
@@ -276,8 +262,6 @@ def convert_database(context: PreprocessingContext) -> None:
     conn_b.close()
     temp_db_path.unlink()
 
-    logger.info(
-        "Post-generation validation succeeded. Database is 100% correct."
-    )
+    logger.info("Post-generation validation succeeded. Database is 100% correct.")
     logger.info("Total NULL conversions: %d", null_conversions)
     logger.info("Database File: %s (%d bytes)", db_path, db_size)

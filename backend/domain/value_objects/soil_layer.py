@@ -4,7 +4,9 @@ import math
 from dataclasses import dataclass
 
 from backend.domain.exceptions import InvalidLayerError
+from backend.domain.value_objects.layer_measurements import LayerMeasurements
 from backend.domain.value_objects.soil_property import PropertyType, SoilProperty
+from backend.domain.value_objects.soil_texture import SoilTexture
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,19 +16,19 @@ class SoilLayer:
     top_depth_cm: float
     bottom_depth_cm: float
     properties: tuple[SoilProperty, ...]
+    texture: SoilTexture | None = None
+    measurements: LayerMeasurements | None = None
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: PLR0912
         """Validate type and content invariants without coercion."""
         # 1. Type validation for depths
-        if (
-            not isinstance(self.top_depth_cm, (int, float))
-            or isinstance(self.top_depth_cm, bool)
+        if not isinstance(self.top_depth_cm, (int, float)) or isinstance(
+            self.top_depth_cm, bool
         ):
             raise InvalidLayerError("top_depth_cm must be a numeric value.")
 
-        if (
-            not isinstance(self.bottom_depth_cm, (int, float))
-            or isinstance(self.bottom_depth_cm, bool)
+        if not isinstance(self.bottom_depth_cm, (int, float)) or isinstance(
+            self.bottom_depth_cm, bool
         ):
             raise InvalidLayerError("bottom_depth_cm must be a numeric value.")
 
@@ -79,3 +81,14 @@ class SoilLayer:
                     "detected in layer."
                 )
             seen_types.add(p.property_type)
+
+        # 4. Validate new value objects
+        if self.texture is not None and not isinstance(self.texture, SoilTexture):
+            raise InvalidLayerError("texture must be a SoilTexture instance.")
+
+        if self.measurements is not None and not isinstance(
+            self.measurements, LayerMeasurements
+        ):
+            raise InvalidLayerError(
+                "measurements must be a LayerMeasurements instance."
+            )
