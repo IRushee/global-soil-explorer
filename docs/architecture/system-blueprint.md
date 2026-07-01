@@ -12,11 +12,12 @@ This diagram illustrates the separation of concerns across the network boundary.
 graph TD
     %% Browser Boundary
     subgraph Browser ["Web Browser Client Layer"]
-        subgraph Auth ["Authentication Boundary"]
-            Anon["Anonymous User Access"]
-            AuthUser["Authenticated User Access"]
-            Work["User Workspace Manager"]
-            Proj["Saved Projects / Bookmarks"]
+        subgraph Auth ["Authentication & Security Boundary"]
+            Anon["Anonymous Access"]
+            Res["Researcher Profile"]
+            Admin["Administrator Console"]
+            Mgr["Dataset Manager"]
+            Dev["Plugin Developer Tools"]
         end
 
         subgraph FE ["React Application Framework"]
@@ -40,8 +41,10 @@ graph TD
 
     %% Network Boundary
     Anon --> UI
-    AuthUser --> Work
-    Work --> Proj
+    Res --> UI
+    Admin --> UI
+    Mgr --> UI
+    Dev --> UI
     UI --> CM
     CM --> EB
     EB --> PR
@@ -297,3 +300,185 @@ graph TD
     ClosePool --> CloseRedis
     CloseRedis --> Exit
 ```
+
+---
+
+## 8. First-Class Study Area Abstractions
+
+To ensure study areas are driven completely by configuration data rather than hardcoded client logic, we establish a standardized metadata schema representing an active **StudyArea** entity.
+
+### A. StudyArea Data Schema
+```typescript
+interface StudyArea {
+  id: string;                         // Unique study area identifier (e.g., "europe_central")
+  name: string;                       // Localized descriptive name (e.g., "Central Europe Grid")
+  projection: string;                 // EPSG code or proj4 coordinate system definition
+  bounds: [[number, number], [number, number]]; // Bounding box limits (SW, NE lat/lon coordinates)
+  availableDatasets: string[];        // Active datasets registered in this area (e.g., ["hwsd_v2"])
+  defaultZoom: number;                // Starting map zoom level (e.g., 6.0)
+  maxZoom: number;                    // Maximum allowed map detail level
+  availableBasemaps: string[];        // List of basemap IDs registered
+  tileEndpoint: string;               // URL pattern of the vector/raster tile service
+  apiEndpoint: string;                // Base URL pattern for observations queries
+  plugins: string[];                  // Analysis/Search plugin IDs enabled for this study area
+  capabilities: DatasetCapabilities;  // Consolidated active capabilities constraints
+}
+```
+
+By registering different `StudyArea` records (e.g. `India`, `Australia`, `Custom Grid`), the entire client map bounds, geocoders, and available data tabs adapt automatically.
+
+---
+
+## 9. Map Render Layer Stack
+
+To prevent z-ordering layout collisions (where overlay polygons cover label text, or query selections slide underneath the terrain layer), Map Engine implementations must strictly adhere to the following layer render order stack:
+
+```
+┌────────────────────────────────────────────────────────┐
+│ UI Overlays (Scale bars, Crosshairs, Legends)         │ ◄ Top Layer (Interactive overlay)
+├────────────────────────────────────────────────────────┤
+│ Labels & Typography (Place names, Road shields)        │
+├────────────────────────────────────────────────────────┤
+│ Query Markers & Pins (Search results, Click location)  │
+├────────────────────────────────────────────────────────┤
+│ Active Measurements (Drawn ruler distances, shapes)    │
+├────────────────────────────────────────────────────────┤
+│ Selection Outlines (Highlighted active soil SMU)      │
+├────────────────────────────────────────────────────────┤
+│ Scientific Overlays (MVT Polygons / Raster soils)      │
+├────────────────────────────────────────────────────────┤
+│ Topographic Terrain Relief (Hillshading, Contours)     │
+├────────────────────────────────────────────────────────┤
+│ Administrative Boundaries (Country / State borders)    │
+├────────────────────────────────────────────────────────┤
+│ Base Map Vector (Land mass, Water bodies fill)         │ ◄ Bottom Layer (Background)
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 10. Information Panel Architecture
+
+Because this platform centers primarily around **Scientific Observations**, the `ScientificInfoPanel` has a specialized, componentized layout hierarchy mapping to the scientific aggregate outputs:
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   Information Panel                    │
+├────────────────────────────────────────────────────────┤
+│  Summary Section (Coord, Weather, Koppen Climate)      │
+├────────────────────────────────────────────────────────┤
+│  Profile Tabs selector (Dominant share percentage)     │
+├────────────────────────────────────────────────────────┤
+│  Layout Grid:                                          │
+│  ┌─────────────────────────┬────────────────────────┐  │
+│  │  Vertical Horizon Chart │ Measurements Tables    │  │
+│  │  (Depth vs Properties)  │ ├── Physical properties│  │
+│  │                         │ ├── Chemical parameters│  │
+│  │                         │ └── Hydraulic stats    │  │
+│  └─────────────────────────┴────────────────────────┘  │
+├────────────────────────────────────────────────────────┤
+│  Context Card:                                         │
+│  ├── Hydrologic context descriptions                   │
+│  └── Land limitations growth modifiers                 │
+├────────────────────────────────────────────────────────┤
+│  Metadata & Provenance attribution card                │
+├────────────────────────────────────────────────────────┤
+│  Related Datasets recommendation links                 │
+├────────────────────────────────────────────────────────┤
+│  Export Toolbox (JSON, CSV, PDF, Share link triggers)  │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 11. Consolidated Search Providers Interface
+
+All search types implement a unified search handler interface, enabling polymorphic geocoding and attribute lookup:
+
+```typescript
+interface SearchResultItem {
+  id: string;
+  label: string;
+  category: 'coordinate' | 'location' | 'scientific_attribute' | 'dataset' | 'bookmark' | 'history';
+  coordinate: { lat: number; lon: number };
+  score: number;
+  metadata?: Record<string, any>;
+}
+
+interface SearchProvider {
+  id: string;
+  name: string;
+  search(query: string, bounds?: [[number, number], [number, number]]): Promise<SearchResultItem[]>;
+}
+```
+
+The Search Module coordinates registry lookups across standard search adapter implementations:
+*   `CoordinateSearchProvider`: Parses decimal/DMS notation coordinates.
+*   `LocationSearchProvider`: Queries external Nominatim/Mapbox geocoders.
+*   `ScientificAttributeSearchProvider`: Scans taxonomies (e.g. "Luvisols").
+*   `DatasetSearchProvider`: Searches available layers (e.g. "clay").
+*   `BookmarkSearchProvider`: Checks user's annotated bookmarks list.
+*   `HistorySearchProvider`: Searches local history logs store.
+
+---
+
+## 12. Internationalization (i18n) Strategy
+
+To support multi-language localizations in the field while maintaining scientific and scientific-database reproducibility:
+1.  **Stable Scientific Names**: Scientific constants (e.g. taxonomy designations like `Luvisols`, soil codes like `LVcr`, standard measurement keys like `organic_carbon`) remain **strictly untranslated** in database cells and API JSON files.
+2.  **UI Label Localization**: User-facing labels, field descriptors, and menus are localized using an i18n framework (e.g. `react-i18next`). UI keys map to translatable translation files:
+    *   `measurements.chemical.ph_water` → `"pH (Water)"` (EN) / `"pH (Eau)"` (FR)
+    *   `limitations.root_depth_description` → `"Root depth accessibility"` (EN) / `"Accessibilité de la profondeur des racines"` (FR)
+
+---
+
+## 13. Styling Theme Abstractions
+
+To simplify dark mode, accessibility high-contrast rules, and map readability overlays, styling tokens are structured into four segregated theme abstraction layers:
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   Theme Configuration                  │
+├────────────────────────────────────────────────────────┤
+│  Application Theme (Tailwind HSL colors, dark mode)    │
+├────────────────────────────────────────────────────────┤
+│  Map Theme (MapLibre vector styling rules, roads fill) │
+├────────────────────────────────────────────────────────┤
+│  Scientific Theme (Soil colors, texture colors)        │
+├────────────────────────────────────────────────────────┤
+│  Accessibility Theme (Colorblind options, large text) │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 14. Offline Fieldwork Capabilities
+
+To support field surveys where network coverage is absent, the system defines four operational offline stages:
+
+```
+[ Stage 1: Online ] (Full connection; network fetches and real-time CDN tile downloads)
+        │
+        ▼
+[ Stage 2: Offline Available ] (Service Worker cache pre-warmed for designated study areas)
+        │
+        ▼
+[ Stage 3: Offline Read Only ] (REST requests resolved from LocalStorage; cached map tiles rendered)
+        │
+        ▼
+[ Stage 4: Offline Analysis ] (Local Turf.js spatial clip operations; geojson file export)
+```
+
+---
+
+## 15. Role-Based Authorization Model
+
+Security configurations enforce a strict client-side role hierarchy to govern access to workspace editing tools and database management screens:
+
+| Access Role | Privileges | Target UI Access Controls |
+| :--- | :--- | :--- |
+| **`Anonymous`** | Read-only coordinate queries, view overlays | View map, read info panel details |
+| **`Researcher`**| Anonymous + Save Projects, bookmark coordinate queries | Unlock Saved Projects tabs, write annotations |
+| **`Dataset Manager`** | Researcher + Upload datasets, update metadata lookups | Access data manager control panel screens |
+| **`Plugin Developer`**| Researcher + Register custom providers, inspect metrics | Access developer plugin register tab, inspect logs |
+| **`Administrator`** | All permissions (Full system override access) | Unlock full application config console panel |
