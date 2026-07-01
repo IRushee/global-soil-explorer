@@ -235,6 +235,7 @@ export interface MapRenderer {
   setBasemapStyle(basemap: string): void
   setCursor(cursorType: string): void
   setSelectionMarker(lat: number | null, lon: number | null): void
+  flyTo(lat: number, lon: number, zoom?: number): void
   addLayer(layer: OverlayLayer): void
   updateLayer(layerId: string, updates: Partial<OverlayLayer>): void
   removeLayer(layerId: string): void

@@ -15,6 +15,7 @@ import {
   ClassificationCard,
   MetadataCard
 } from '../components/ScientificPanelComponents'
+import { SearchBox, NavigationControls, BookmarksPanel } from '../components/SearchAndNavigation'
 
 class SelectCoordinateCommand implements Command {
   id = 'SelectCoordinate'
@@ -80,6 +81,75 @@ export const AppShell: React.FC = () => {
 
   // Local state for hover coordinates
   const [hoverCoord, setHoverCoord] = useState<Coordinate | null>(null)
+
+  // Restore state from URL on initial mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const urlLat = parseFloat(params.get('lat') || '')
+    const urlLon = parseFloat(params.get('lon') || '')
+    const urlZoom = parseFloat(params.get('zoom') || '')
+
+    const store = useGlobalStore.getState()
+
+    if (!isNaN(urlLat) && !isNaN(urlLon)) {
+      store.setCenter([urlLon, urlLat])
+    }
+    if (!isNaN(urlZoom)) {
+      store.setZoom(urlZoom)
+    }
+
+    const selectedLat = parseFloat(params.get('selected_lat') || '')
+    const selectedLon = parseFloat(params.get('selected_lon') || '')
+    if (!isNaN(selectedLat) && !isNaN(selectedLon)) {
+      const coord = { latitude: selectedLat, longitude: selectedLon }
+      // Trigger geocoding query programmatically on mount once Map is ready
+      const triggerInitialQuery = async () => {
+        // Wait briefly for map/api clients to be ready
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        setSelectedCoordinate(coord)
+        eventBus.dispatch('CoordinateSelected', coord)
+        mapRenderer.setSelectionMarker(selectedLat, selectedLon)
+        
+        setInfoPanelOpen(true)
+        setLoading(true)
+        setError(null)
+        try {
+          const obs = await soilApi.getSoilObservation(coord)
+          setActiveObservation(obs)
+          eventBus.dispatch('ObservationLoaded', obs)
+          setActiveProfileIndex(0)
+          setActiveLayerIndex(null)
+        } catch (err: any) {
+          logger.error('Failed to restore soil observation from URL:', err)
+          setError(err.message || 'Failed to restore soil observation')
+          setActiveObservation(null)
+          eventBus.dispatch('ObservationLoaded', null)
+        } finally {
+          setLoading(false)
+        }
+      }
+      triggerInitialQuery()
+    }
+  }, [])
+
+  // Synchronize URL with active map state
+  useEffect(() => {
+    const params = new URLSearchParams()
+    // 1. Camera state
+    params.set('lat', center[1].toFixed(5))
+    params.set('lon', center[0].toFixed(5))
+    params.set('zoom', zoom.toFixed(1))
+
+    // 2. Selected Coordinate (if any)
+    if (selectedCoordinate) {
+      params.set('selected_lat', selectedCoordinate.latitude.toFixed(5))
+      params.set('selected_lon', selectedCoordinate.longitude.toFixed(5))
+    }
+
+    const newUrl = `${window.location.pathname}?${params.toString()}`
+    window.history.replaceState(null, '', newUrl)
+  }, [center, zoom, selectedCoordinate])
 
   // Ref to hold the map click handler to avoid stale closures
   const clickHandlerRef = useRef<((e: any) => void) | null>(null)
@@ -436,9 +506,9 @@ export const AppShell: React.FC = () => {
               Collapse
             </button>
           </div>
-          <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4">
+          <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
             <p>Layer controls placeholder. No thematic overlays active.</p>
-            <div className="border border-slate-800 bg-slate-900/50 p-4 rounded text-xs leading-relaxed">
+            <div className="border border-slate-800 bg-slate-900/50 p-4 rounded text-xs leading-relaxed mb-2">
               <span className="text-slate-200 block mb-1 font-semibold">Active Capabilities:</span>
               <ul className="list-disc pl-4 space-y-1 text-slate-400">
                 <li>Profiles: {activeStudyArea.capabilities.supportsProfiles ? 'YES' : 'NO'}</li>
@@ -446,15 +516,15 @@ export const AppShell: React.FC = () => {
                 <li>Offline: {activeStudyArea.capabilities.supportsOffline ? 'YES' : 'NO'}</li>
               </ul>
             </div>
+            <BookmarksPanel />
           </div>
         </aside>
 
-        {/* Map Container */}
         <main className="flex-1 h-full w-full relative bg-slate-950">
           {!sidebarOpen && (
             <button
               onClick={toggleSidebar}
-              className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 shadow-lg"
+              className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 shadow-lg cursor-pointer"
             >
               Open Layers
             </button>
@@ -466,10 +536,16 @@ export const AppShell: React.FC = () => {
             className="h-full w-full absolute inset-0"
           />
 
+          {/* Search bar */}
+          <SearchBox />
+
+          {/* Map zoom and home navigation controls */}
+          <NavigationControls />
+
           {/* Info toggle trigger simulator */}
           <button
             onClick={() => setInfoPanelOpen(!infoPanelOpen)}
-            className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 shadow-lg"
+            className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 shadow-lg cursor-pointer"
           >
             {infoPanelOpen ? 'Hide Scientific Info' : 'Show Scientific Info'}
           </button>

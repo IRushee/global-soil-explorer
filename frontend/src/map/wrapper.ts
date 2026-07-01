@@ -168,6 +168,20 @@ export class MapLibreRenderer implements MapRenderer {
     }
   }
 
+  flyTo(lat: number, lon: number, zoom?: number): void {
+    if (!this.mapInstance) {
+      logger.warn('Cannot flyTo: map not initialized')
+      return
+    }
+    logger.info(`Flying to center: [${lon}, ${lat}] at zoom: ${zoom}`)
+    this.mapInstance.flyTo({
+      center: [lon, lat],
+      zoom: zoom !== undefined ? zoom : this.mapInstance.getZoom(),
+      essential: true,
+      duration: 1500,
+    })
+  }
+
   setCursor(cursorType: string): void {
     if (!this.mapInstance) return
     const canvas = this.mapInstance.getCanvas()

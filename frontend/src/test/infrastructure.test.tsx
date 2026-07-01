@@ -159,4 +159,62 @@ describe('Global Soil Explorer Infrastructure Tests', () => {
 
     unsub()
   })
+
+  // 9. Bookmarks & Search History Actions in Global Store
+  test('Zustand store manages search history and named bookmarks successfully', () => {
+    // Test bookmarks
+    const testCoord = { latitude: 28.6139, longitude: 77.2090 }
+    useGlobalStore.getState().addBookmark(testCoord)
+    expect(useGlobalStore.getState().bookmarks.length).toBe(1)
+    
+    const bookmark = useGlobalStore.getState().bookmarks[0] as any
+    expect(bookmark.latitude).toBe(28.6139)
+    expect(bookmark.name).toContain('Location')
+    
+    useGlobalStore.getState().renameBookmark(testCoord, 'Capital City')
+    expect((useGlobalStore.getState().bookmarks[0] as any).name).toBe('Capital City')
+    
+    useGlobalStore.getState().removeBookmark(testCoord)
+    expect(useGlobalStore.getState().bookmarks.length).toBe(0)
+
+    // Test search history
+    const historyCoord = { latitude: 40.7128, longitude: -74.0060 }
+    useGlobalStore.getState().addHistory(historyCoord)
+    expect(useGlobalStore.getState().history.length).toBe(1)
+    expect((useGlobalStore.getState().history[0] as any).latitude).toBe(40.7128)
+
+    useGlobalStore.getState().clearHistory()
+    expect(useGlobalStore.getState().history.length).toBe(0)
+  })
+
+  // 10. Nominatim Search Provider queries places successfully
+  test('NominatimSearchProvider geocodes input queries and returns formatted results', async () => {
+    const { NominatimSearchProvider } = await import('../components/SearchAndNavigation')
+    const provider = new NominatimSearchProvider()
+    
+    const mockResponse = [
+      {
+        place_id: 12345,
+        display_name: 'Delhi, India',
+        lat: '28.6139',
+        lon: '77.2090',
+        name: 'Delhi',
+        address: { city: 'Delhi', country: 'India' }
+      }
+    ]
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockResponse)
+      } as any)
+    )
+
+    const results = await provider.search('Delhi')
+    expect(results.length).toBe(1)
+    expect(results[0].label).toBe('Delhi, India')
+    expect(results[0].coordinate.lat).toBe(28.6139)
+    expect(results[0].coordinate.lon).toBe(77.2090)
+
+    fetchSpy.mockRestore()
+  })
 })

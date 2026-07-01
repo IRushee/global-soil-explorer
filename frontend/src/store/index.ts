@@ -54,6 +54,11 @@ export interface ConfigurationSlice {
   setActiveRendererId: (rendererId: string) => void
 }
 
+export interface Bookmark extends Coordinate {
+  id: string
+  name: string
+}
+
 export interface WorkspaceSlice {
   workspaceId: string
   bookmarks: Coordinate[]
@@ -61,7 +66,9 @@ export interface WorkspaceSlice {
   history: Coordinate[]
   addBookmark: (coord: Coordinate) => void
   removeBookmark: (coord: Coordinate) => void
+  renameBookmark: (coord: Coordinate, newName: string) => void
   addHistory: (coord: Coordinate) => void
+  clearHistory: () => void
 }
 
 export interface FeatureFlagsSlice {
@@ -132,14 +139,44 @@ export const useGlobalStore = create<GlobalStoreState>((set) => ({
   bookmarks: [],
   savedProjects: [],
   history: [],
-  addBookmark: (coord) => set((state) => ({ bookmarks: [...state.bookmarks, coord] })),
+  addBookmark: (coord) => set((state) => {
+    const exists = state.bookmarks.some(b => b.latitude === coord.latitude && b.longitude === coord.longitude)
+    if (exists) return {}
+    
+    const newBookmark: Bookmark = {
+      latitude: coord.latitude,
+      longitude: coord.longitude,
+      id: `bookmark-${Date.now()}`,
+      name: (coord as any).name || `Location (${coord.latitude.toFixed(4)}, ${coord.longitude.toFixed(4)})`
+    }
+    return { bookmarks: [...state.bookmarks, newBookmark] }
+  }),
   removeBookmark: (coord) =>
     set((state) => ({
       bookmarks: state.bookmarks.filter(
         (b) => b.latitude !== coord.latitude || b.longitude !== coord.longitude
       ),
     })),
-  addHistory: (coord) => set((state) => ({ history: [coord, ...state.history].slice(0, 50) })),
+  renameBookmark: (coord, newName) =>
+    set((state) => ({
+      bookmarks: state.bookmarks.map((b) => {
+        if (b.latitude === coord.latitude && b.longitude === coord.longitude) {
+          return { ...b, name: newName }
+        }
+        return b
+      })
+    })),
+  addHistory: (coord) => set((state) => {
+    const filteredHistory = state.history.filter(h => h.latitude !== coord.latitude || h.longitude !== coord.longitude)
+    const newHistoryItem = {
+      latitude: coord.latitude,
+      longitude: coord.longitude,
+      id: `history-${Date.now()}`,
+      name: (coord as any).name || `Search (${coord.latitude.toFixed(4)}, ${coord.longitude.toFixed(4)})`,
+    }
+    return { history: [newHistoryItem, ...filteredHistory].slice(0, 50) }
+  }),
+  clearHistory: () => set({ history: [] }),
 
   // FeatureFlagsSlice
   flags: { ...config.featureFlags },
