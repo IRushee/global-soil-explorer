@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useGlobalStore } from '../store'
 import { mapRenderer } from '../map/wrapper'
 import { studyAreaRegistry } from '../services/studyArea'
 import { logger } from '../utils/logger'
+import { soilApi } from '../api/client'
 
 export const AppShell: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -20,7 +21,41 @@ export const AppShell: React.FC = () => {
     setActiveStudyArea,
     activeDatasetId,
     setActiveDatasetId,
+    selectedCoordinate,
+    setSelectedCoordinate,
+    activeObservation,
+    setActiveObservation,
   } = useGlobalStore()
+
+  // Local state for loading, error, and profile tabs
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [activeProfileIndex, setActiveProfileIndex] = useState(0)
+
+  // Ref to hold the map click handler to avoid stale closures
+  const clickHandlerRef = useRef<((e: any) => void) | null>(null)
+
+  // Keep clickHandlerRef updated with latest logic
+  useEffect(() => {
+    clickHandlerRef.current = async (e: any) => {
+      const coord = e.coordinate
+      setSelectedCoordinate(coord)
+      setInfoPanelOpen(true)
+      setLoading(true)
+      setError(null)
+      try {
+        const obs = await soilApi.getSoilObservation(coord)
+        setActiveObservation(obs)
+        setActiveProfileIndex(0) // Reset tab index on successful fetch
+      } catch (err: any) {
+        logger.error('Failed to retrieve soil observation:', err)
+        setError(err.message || 'Failed to retrieve soil observation')
+        setActiveObservation(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+  })
 
   // Initialize Map wrapper on shell mount
   useEffect(() => {
@@ -53,6 +88,13 @@ export const AppShell: React.FC = () => {
         })
         setInitialized(true)
         logger.info('Map wrapper initialized inside AppShell layout')
+
+        // Register the map click event handler exactly once, forwarding to the ref
+        mapRenderer.on('click', (e) => {
+          if (clickHandlerRef.current) {
+            clickHandlerRef.current(e)
+          }
+        })
       } catch (err) {
         logger.error('AppShell failed to load Map engine:', err)
       }
@@ -74,6 +116,312 @@ export const AppShell: React.FC = () => {
       (area.bounds[0][0] + area.bounds[1][0]) / 2
     )
     mapRenderer.setZoom(area.defaultZoom)
+  }
+
+  // Helper to extract properties from layers (measurements or fallback to properties array)
+  const getPropertyValue = (layer: any, type: 'ph' | 'organic_carbon' | 'sand' | 'silt' | 'clay'): number | null => {
+    if (layer.measurements) {
+      if (type === 'ph' && layer.measurements.chemical?.ph !== undefined && layer.measurements.chemical?.ph !== null) return layer.measurements.chemical.ph
+      if (type === 'organic_carbon' && layer.measurements.chemical?.organic_carbon !== undefined && layer.measurements.chemical?.organic_carbon !== null) return layer.measurements.chemical.organic_carbon
+      if (type === 'sand' && layer.measurements.physical?.sand !== undefined && layer.measurements.physical?.sand !== null) return layer.measurements.physical.sand
+      if (type === 'silt' && layer.measurements.physical?.silt !== undefined && layer.measurements.physical?.silt !== null) return layer.measurements.physical.silt
+      if (type === 'clay' && layer.measurements.physical?.clay !== undefined && layer.measurements.physical?.clay !== null) return layer.measurements.physical.clay
+    }
+    
+    if (layer.properties && Array.isArray(layer.properties)) {
+      const map: Record<string, string[]> = {
+        ph: ['ph_water', 'ph'],
+        organic_carbon: ['organic_carbon', 'organic carbon'],
+        sand: ['sand'],
+        silt: ['silt'],
+        clay: ['clay'],
+      }
+      const searchTypes = map[type] || [type]
+      const prop = layer.properties.find((p: any) =>
+        searchTypes.includes(p.property_type.toLowerCase())
+      )
+      return prop && prop.value !== undefined ? prop.value : null
+    }
+    
+    return null
+  }
+
+  // Helper to resolve pH acidity category and style attributes
+  const getPhAcidityInfo = (ph: number) => {
+    if (ph < 4.5) {
+      return {
+        category: 'Extremely Acidic',
+        bgClass: 'bg-red-950/50 text-red-400 border-red-900/50',
+        textClass: 'text-red-400',
+      }
+    }
+    if (ph < 5.1) {
+      return {
+        category: 'Very Strongly Acidic',
+        bgClass: 'bg-orange-950/50 text-orange-400 border-orange-900/50',
+        textClass: 'text-orange-400',
+      }
+    }
+    if (ph < 5.6) {
+      return {
+        category: 'Strongly Acidic',
+        bgClass: 'bg-amber-950/50 text-amber-400 border-amber-900/50',
+        textClass: 'text-amber-400',
+      }
+    }
+    if (ph < 6.1) {
+      return {
+        category: 'Moderately Acidic',
+        bgClass: 'bg-yellow-950/50 text-yellow-450 border-yellow-900/50',
+        textClass: 'text-yellow-450',
+      }
+    }
+    if (ph < 6.6) {
+      return {
+        category: 'Slightly Acidic',
+        bgClass: 'bg-lime-950/50 text-lime-400 border-lime-900/50',
+        textClass: 'text-lime-400',
+      }
+    }
+    if (ph < 7.4) {
+      return {
+        category: 'Neutral',
+        bgClass: 'bg-emerald-950/50 text-emerald-400 border-emerald-900/50',
+        textClass: 'text-emerald-400',
+      }
+    }
+    if (ph < 7.9) {
+      return {
+        category: 'Slightly Alkaline',
+        bgClass: 'bg-teal-950/50 text-teal-400 border-teal-900/50',
+        textClass: 'text-teal-400',
+      }
+    }
+    if (ph < 8.5) {
+      return {
+        category: 'Moderately Alkaline',
+        bgClass: 'bg-cyan-950/50 text-cyan-400 border-cyan-900/50',
+        textClass: 'text-cyan-400',
+      }
+    }
+    if (ph <= 9.0) {
+      return {
+        category: 'Strongly Alkaline',
+        bgClass: 'bg-blue-950/50 text-blue-400 border-blue-900/50',
+        textClass: 'text-blue-400',
+      }
+    }
+    return {
+      category: 'Very Strongly Alkaline',
+      bgClass: 'bg-purple-950/50 text-purple-400 border-purple-900/50',
+      textClass: 'text-purple-400',
+    }
+  }
+
+  // Render method for the Scientific Profile Panel based on state
+  const renderScientificProfile = () => {
+    // 1. Initial State
+    if (!selectedCoordinate) {
+      return (
+        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
+          <p className="italic text-xs text-slate-500">
+            No active coordinate selected. Click the map to resolve coordinates.
+          </p>
+        </div>
+      )
+    }
+
+    // 2. Loading State
+    if (loading) {
+      return (
+        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col items-center justify-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+          <p className="text-slate-400">Loading soil profile...</p>
+        </div>
+      )
+    }
+
+    // 3. Error State
+    if (error) {
+      return (
+        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
+          <div className="bg-red-950/50 border border-red-900/50 p-4 rounded text-xs text-red-400">
+            <span className="font-semibold block mb-1">Query Failed:</span>
+            {error}
+          </div>
+        </div>
+      )
+    }
+
+    // 4. 204 No Content (Water/Ocean)
+    if (!activeObservation) {
+      return (
+        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
+          <p className="italic text-xs text-slate-500">
+            Water or Unmapped Land. No soil profile is available for this coordinate.
+          </p>
+        </div>
+      )
+    }
+
+    // 5. Success State
+    const activeProfile = activeObservation.profiles?.[activeProfileIndex] || activeObservation.profiles?.[0]
+    
+    return (
+      <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
+        {/* Coordinate Metadata */}
+        <div className="border border-slate-800 bg-slate-900/50 p-3 rounded text-xs">
+          <span className="text-slate-200 block mb-1 font-semibold">Location Metadata:</span>
+          <div className="grid grid-cols-2 gap-2 text-slate-400 font-mono">
+            <div>Lat: {selectedCoordinate.latitude.toFixed(6)}°</div>
+            <div>Lon: {selectedCoordinate.longitude.toFixed(6)}°</div>
+          </div>
+        </div>
+
+        {/* Tabbed Control for Multiple Profiles */}
+        {activeObservation.profiles && activeObservation.profiles.length > 1 && (
+          <div className="flex flex-col gap-2 mb-2">
+            <span className="text-xs font-semibold text-slate-400">Mapping Unit Components:</span>
+            <div className="flex flex-wrap gap-1.5 border-b border-slate-800 pb-2">
+              {activeObservation.profiles.map((profile, idx) => {
+                const shareVal = profile.composition_share !== null && profile.composition_share !== undefined
+                  ? (profile.composition_share <= 1 ? Math.round(profile.composition_share * 100) : Math.round(profile.composition_share))
+                  : null
+                const shareStr = shareVal !== null ? ` (${shareVal}%)` : ''
+                const name = profile.classification.class_name
+                const isActive = idx === activeProfileIndex
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveProfileIndex(idx)}
+                    className={`text-xs px-2.5 py-1.5 rounded transition-all font-medium border ${
+                      isActive
+                        ? 'bg-teal-900/30 text-teal-350 border-teal-800/80 shadow'
+                        : 'bg-slate-800/50 text-slate-400 border-transparent hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {name}{shareStr}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Active Profile Info */}
+        {activeProfile ? (
+          <div className="flex flex-col gap-4">
+            {/* Classification Header (if single profile) */}
+            {activeObservation.profiles.length === 1 && (
+              <div className="border-b border-slate-800 pb-2">
+                <span className="text-xs text-slate-500 uppercase font-semibold">Classification</span>
+                <div className="text-slate-200 font-semibold">{activeProfile.classification.class_name}</div>
+              </div>
+            )}
+
+            {/* Depth Layers Stack */}
+            <div className="flex flex-col gap-3">
+              <span className="text-xs font-semibold text-slate-400">Soil Layers:</span>
+              {activeProfile.layers && activeProfile.layers.length > 0 ? (
+                activeProfile.layers.map((layer, index) => {
+                  const ph = getPropertyValue(layer, 'ph')
+                  const oc = getPropertyValue(layer, 'organic_carbon')
+                  const sand = getPropertyValue(layer, 'sand')
+                  const silt = getPropertyValue(layer, 'silt')
+                  const clay = getPropertyValue(layer, 'clay')
+
+                  const phInfo = ph !== null ? getPhAcidityInfo(ph) : null
+
+                  return (
+                    <div key={index} className="border border-slate-800 bg-slate-900/30 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+                      {/* Depth range & acidity category badge */}
+                      <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span className="font-semibold text-slate-200 text-sm">
+                          {layer.top_depth_cm} - {layer.bottom_depth_cm} cm
+                        </span>
+                        {phInfo && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${phInfo.bgClass}`}>
+                            {phInfo.category}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Chemical Properties grid */}
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-400 font-medium">pH (Water):</span>
+                          <span className={`font-mono font-semibold ${phInfo ? phInfo.textClass : 'text-slate-400'}`}>
+                            {ph !== null ? ph.toFixed(2) : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-400 font-medium">Organic Carbon:</span>
+                          <span className="text-slate-200 font-mono font-semibold">
+                            {oc !== null ? `${oc.toFixed(2)}%` : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Physical texture percentages progress bar */}
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        <span className="text-slate-400 font-medium text-xs">Soil Texture Components:</span>
+                        {sand !== null || silt !== null || clay !== null ? (
+                          <div>
+                            <div className="flex w-full h-3 rounded-full overflow-hidden bg-slate-800/80 border border-slate-700">
+                              {sand !== null && (
+                                <div
+                                  style={{ width: `${sand}%` }}
+                                  className="bg-amber-500 h-full transition-all duration-300"
+                                  title={`Sand: ${sand}%`}
+                                />
+                              )}
+                              {silt !== null && (
+                                <div
+                                  style={{ width: `${silt}%` }}
+                                  className="bg-slate-400 h-full transition-all duration-300"
+                                  title={`Silt: ${silt}%`}
+                                />
+                              )}
+                              {clay !== null && (
+                                <div
+                                  style={{ width: `${clay}%` }}
+                                  className="bg-red-500 h-full transition-all duration-300"
+                                  title={`Clay: ${clay}%`}
+                                />
+                              )}
+                            </div>
+                            <div className="flex justify-between text-[10px] font-mono mt-1.5 text-slate-450">
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                                Sand: {sand !== null ? `${sand.toFixed(1)}%` : 'N/A'}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>
+                                Silt: {silt !== null ? `${silt.toFixed(1)}%` : 'N/A'}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                                Clay: {clay !== null ? `${clay.toFixed(1)}%` : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic text-[11px]">No texture component data available.</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="text-xs text-slate-500 italic">No depth layers available.</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs text-slate-550 italic">No profile data available.</div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -186,7 +534,7 @@ export const AppShell: React.FC = () => {
             infoPanelOpen ? 'w-96' : 'w-0 overflow-hidden border-none'
           }`}
         >
-          <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+          <div className="p-4 border-b border-slate-800 flex justify-between items-center select-none">
             <span className="font-semibold text-slate-200">Scientific Profile</span>
             <button
               onClick={() => setInfoPanelOpen(false)}
@@ -195,12 +543,7 @@ export const AppShell: React.FC = () => {
               Close
             </button>
           </div>
-          <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4">
-            <p>Scientific information panel container placeholder.</p>
-            <p className="italic text-xs text-slate-500">
-              No active coordinate selected. Click the map to resolve coordinates.
-            </p>
-          </div>
+          {renderScientificProfile()}
         </aside>
       </div>
 
