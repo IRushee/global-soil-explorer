@@ -65,10 +65,31 @@ Latency metrics for the complete coordinated query pipeline (Coordinate → Spat
     *   **3. Domain Reconstruction**: Average: `0.262 ms`
     *   **4. Application Orchestration**: Average: `0.138 ms`
 
+### 5. REST API Performance (Milestone 17)
+Baseline metrics for the `GET /soil` endpoint (Coordinate query) over valid land coordinates (including FastAPI routing, validation, serialization, and middleware overhead):
+
+*   **1 Request**:
+    *   **Average Latency**: `15.065 ms` | Median: `15.065 ms` | P95: `15.065 ms` | P99: `15.065 ms`
+    *   **Throughput**: `66.37 req/sec`
+    *   **Memory Growth**: `0.00 MB` (Start: `53.52 MB` | End: `53.52 MB`)
+*   **100 Requests**:
+    *   **Average Latency**: `15.060 ms` | Median: `15.027 ms` | P95: `15.533 ms` | P99: `15.991 ms`
+    *   **Throughput**: `66.40 req/sec`
+    *   **Memory Growth**: `0.05 MB` (Start: `53.56 MB` | End: `53.61 MB`)
+*   **1000 Requests**:
+    *   **Average Latency**: `15.251 ms` | Median: `15.151 ms` | P95: `15.803 ms` | P99: `16.766 ms`
+    *   **Throughput**: `65.57 req/sec`
+    *   **Memory Growth**: `0.05 MB` (Start: `53.62 MB` | End: `53.67 MB`)
+*   **5000 Requests**:
+    *   **Average Latency**: `15.243 ms` | Median: `15.146 ms` | P95: `15.716 ms` | P99: `17.013 ms`
+    *   **Throughput**: `65.60 req/sec`
+    *   **Memory Growth**: `0.39 MB` (Start: `53.69 MB` | End: `54.08 MB`)
+
 ## Conclusion
 *   Offline database ingestion is extremely fast, executing under 15 seconds.
 *   Runtime lookups resolve in under 16 ms, with SQLite query execution representing the primary latency component (~98.6% of E2E pipeline) and domain mapping/reconstruction taking less than 0.3 ms (~1.8%).
 *   Spatial lookup is highly optimized, completing individual coordinate resolutions in under 5 microseconds (~0.03%) on average.
 *   Application orchestration overhead is negligible, taking less than 0.2 ms on average (~0.9%).
 *   Coordinated Application Service queries resolve in ~14.7 ms on average, demonstrating minimal overhead over direct repository lookups and satisfying runtime constraints.
+*   FastAPI REST API layer introduces negligible routing, validation, and serialization overhead (~0.9 ms or ~6.1% of E2E latency), resolving API requests in ~15.0 ms on average.
 *   These measurements serve as baselines only. Actual performance depends on target deployment hardware.

@@ -24,7 +24,7 @@ Assess the current state of the global soil explorer backend components, highlig
 *   ✓ **Architecture**: Fully documented and frozen runtime architectures.
 
 ### 2. Pending Milestones
-*   □ **REST API (FastAPI)**: Expose coordinates query endpoints.
+*   ✓ **REST API (FastAPI)**: Expose coordinates query endpoints.
 *   □ **Tile Service**: Implement map visualization raster/vector tile engine (independent of analytical queries).
 *   □ **Frontend (React/TypeScript)**: Build user dashboard, interactive map explorer, and profile charts.
 *   □ **Deployment**: Set up production server environments.
