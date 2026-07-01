@@ -54,7 +54,7 @@ graph TD
     Browser -- "HTTP requests / WebSockets" --> Edge
 
     %% CDN and Edge Routing
-    subgraph Edge ["Edge Infrastructure"]
+    subgraph Edge ["Edge Infrastructure (Optional for Scale)"]
         CDN["CDN Cache (Cloudflare / CloudFront)"]
         TS["Tile Service (Direct Vector/Raster tiles)"]
     end
@@ -64,12 +64,12 @@ graph TD
     subgraph Backend ["FastAPI Application Server"]
         subgraph API ["API & Processing Boundary"]
             REST["REST API Endpoint Router"]
-            BG["Background Worker Engine"]
-            EQ["Export Jobs Queue"]
-            TG["On-The-Fly Tile Generator"]
+            BG["Background Worker Engine (Optional)"]
+            EQ["Export Jobs Queue (Optional)"]
+            TG["On-The-Fly Tile Generator (Optional)"]
         end
 
-        subgraph Obs ["Observability Engine"]
+        subgraph Obs ["Observability Engine (Optional)"]
             Log["Logging (Loguru/JSON)"]
             Met["Metrics (Prometheus/StatsD)"]
             Trc["Tracing (OpenTelemetry)"]
@@ -81,7 +81,7 @@ graph TD
             AS["Application Service"]
             SL["Spatial Lookup Service"]
             REP["SQLite Repository"]
-            DA["Dataset Adapter (SoilGrids/SSURGO Translation)"]
+            DA["Scientific Dataset Adapter (SoilGrids/SSURGO Translation)"]
         end
         
         subgraph DOM ["Domain Model Layer"]
@@ -132,12 +132,12 @@ sequenceDiagram
     participant Bus as AppEventBus
     participant QP as Coordinate Pipeline
     participant Cache as React Query Cache
-    participant CDN as CDN Edge Cache
+    participant CDN as CDN Edge Cache (Optional)
     participant API as FastAPI Backend (/v1/soil)
     participant AS as Application Service
     participant SL as Spatial Lookup (Raster)
     participant Repo as SQLite Repository
-    participant DA as Dataset Adapter
+    participant DA as Scientific Dataset Adapter
     participant Dom as Domain Models (SoilObservation)
 
     User->>UI: Clicks coordinate on Map
@@ -160,7 +160,7 @@ sequenceDiagram
             AS->>Repo: get_by_key(smu_id)
             Repo->>Repo: Query SQLite HWSD2_LAYERS & HWSD2_SMU
             Repo->>DA: Send raw data tuples
-            DA->>DA: Translate dataset naming/schema formats
+            DA->>DA: Translate dataset naming/schema formats (HWSD -> Domain)
             DA->>Dom: Construct SoilObservation aggregate
             Dom-->>DA: Return assembled Domain
             DA-->>Repo: Return Domain SoilObservation
@@ -180,20 +180,41 @@ sequenceDiagram
 
 ---
 
-## 3. Physical Deployment Topology
+## 3. Physical Deployment Topology & Infrastructure Options
 
-To ensure high scalability and fast response times, static and vector tiles bypass the main FastAPI application server, routing directly to the dedicated Tile Service.
+To allow the platform to run easily on a single developer laptop (Local Stack) while maintaining architectural guidelines for high-load production scaling (Scale Stack), infrastructure components are divided into Required and Optional roles.
+
+### A. Minimal Stack (Required for local development and run-from-laptop)
+For default HWSD queries, static assets and coordinates querying route directly through the FastAPI backend to read SQLite and raster assets locally. No external caches or queues are required:
+
+```
+[ Browser / Client ] ──(REST Queries)──► [ FastAPI App (Uvicorn) ] ──► [ SQLite DB / Raster Files ]
+```
+
+### B. Scale Stack (Optional layers for high-load production environments)
+For large-scale vector tile serving and asynchronous analysis, static and vector tiles bypass the main FastAPI application server, routing directly to the dedicated Tile Service.
 
 ```mermaid
 graph TD
-    Browser["Web Browser Client"]
-    CDN["Edge CDN (Cloudflare / CloudFront)"]
-    TS["Tile Service (Static/Vector Tile Host)"]
-    FastAPI["FastAPI App (REST API / Uvicorn)"]
-    Worker["Background Worker (Celery/RQ)"]
-    Redis["Redis (Jobs Queue & Rate Limiter)"]
-    DB["SQLite DB (hwsd.db)"]
-    Raster["Binary Raster (HWSD2.bil/.hdr)"]
+    subgraph Client ["Client Devices"]
+        Browser["Web Browser Client"]
+    end
+
+    subgraph CDNLayer ["Distribution Layer (Optional)"]
+        CDN["Edge CDN (Cloudflare / CloudFront)"]
+    end
+
+    subgraph Core ["Minimal Stack (Required)"]
+        FastAPI["FastAPI App (REST API / Uvicorn)"]
+        DB["SQLite DB (hwsd.db)"]
+        Raster["Binary Raster (HWSD2.bil/.hdr)"]
+    end
+
+    subgraph ScaleServices ["Scale Stack (Optional)"]
+        TS["Tile Service (Static/Vector Tile Host)"]
+        Worker["Background Worker (Celery/RQ)"]
+        Redis["Redis (Jobs Queue & Rate Limiter)"]
+    end
 
     Browser -- "HTTPS" --> CDN
     CDN -- "Vector / Static Tiles" --> TS
@@ -205,6 +226,19 @@ graph TD
     Worker --> DB
     TS --> Raster
 ```
+
+### C. Infrastructure Dependency Classification
+
+*   **Required Infrastructure**:
+    *   **FastAPI**: Server framework hosting the scientific API endpoints.
+    *   **SQLite**: Databases layer housing attribute lookups and mapping layers data.
+    *   **Raster Files (`.bil` / `.hdr`)**: Georeferenced cell rasters holding spatial indices.
+*   **Optional Infrastructure (Production Scaling)**:
+    *   **CDN (Content Delivery Network)**: Caches static tile files and REST queries close to users.
+    *   **Tile Service (Tile Server)**: Serves map tile protocols (e.g., MVT vector tiles) directly without routing through the REST API.
+    *   **Redis**: Key-value data cache and background task broker.
+    *   **Celery / RQ**: Asynchronous background workers managing long-running jobs (e.g. dynamic reports generation, bulk spatial clips).
+    *   **Sentry / Prometheus**: Server observability, logging, and error tracking metrics.
 
 ---
 
@@ -218,8 +252,8 @@ The platform maintains a highly efficient 9-tier cache hierarchy to minimize lat
 | **L2** | **TanStack Query** | < 1ms | In-Memory Cache | Stale-time: 5 minutes; manual refetch triggers |
 | **L3** | **Service Worker** | 2 - 10ms | Cache Storage API | Least Recently Used (LRU) - Max 100MB limit |
 | **L4** | **Browser HTTP Cache** | 2 - 10ms | Browser Disk | Controlled by Cache-Control headers |
-| **L5** | **CDN Cache** | 15 - 50ms | Edge Server | Purge on new dataset release deployment |
-| **L6** | **FastAPI Cache** | 5 - 15ms | In-Memory (Redis) | Time-to-Live (TTL): 24 hours |
+| **L5** | **CDN Cache (Optional)** | 15 - 50ms | Edge Server | Purge on new dataset release deployment |
+| **L6** | **FastAPI Cache (Optional)** | 5 - 15ms | In-Memory (Redis) | Time-to-Live (TTL): 24 hours |
 | **L7** | **SQLite Page Cache** | < 1ms | RAM | Managed by SQLite Engine (PRAGMA cache_size) |
 | **L8** | **OS Page Cache** | < 1ms | RAM | Managed by Linux/macOS kernel page buffers |
 | **L9** | **Physical Disk** | 1 - 5ms | SSD | Persistence layer - never invalidated |
@@ -234,7 +268,7 @@ To scale the query processing paths independently, queries are split into four d
 `User Pan/Zoom` → `Viewport Box Bounding` → `Service Worker Cache` → `CDN Tile Service` → `Map WebGL Rendering`
 
 ### B. Coordinate Pipeline (Scientific details)
-`Map Click` → `Coord Validation` → `TanStack Cache` → `REST API` → `Dataset Adapter` → `Zustand Store` → `Panel Display`
+`Map Click` → `Coord Validation` → `TanStack Cache` → `REST API` → `Scientific Dataset Adapter` → `Zustand Store` → `Panel Display`
 
 ### C. Search Pipeline (Geocoding)
 `Search Bar Text` → `Debounce` → `Geocoder Provider` → `Location Autocomplete` → `Coordinate selected event`
@@ -251,7 +285,7 @@ To maintain backward compatibility as the system evolves, every layer interface 
 *   **REST API**: Versioned via URL path prefixes (e.g., `/v1/soil`). Legacy routes are retained as aliases.
 *   **Event Contracts**: Event payload schemas are versioned via the event envelope (e.g., `{ type: 'CoordinateSelected', version: '1.0', payload: { lat, lon } }`).
 *   **Plugin API**: The plugin registries validate provider interfaces on registration. Interface upgrades increment the plugin minor version.
-*   **Dataset Adapter Interface**: Backend adapters inherit versioned abstract base classes (e.g., `BaseDatasetAdapterV1`).
+*   **Scientific Dataset Adapter Interface**: Backend adapters inherit versioned abstract base classes (e.g., `BaseDatasetAdapterV1`).
 *   **Export Schema**: Standardized export JSON schemas contain a metadata version string (`schema_version: "1.0"`).
 *   **Tile Schema**: MVT vector tile schemas define key names and properties inside standard versioned tile specifications (e.g., `v1/tile/{z}/{x}/{y}.mvt`).
 
