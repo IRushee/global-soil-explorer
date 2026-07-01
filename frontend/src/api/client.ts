@@ -48,7 +48,7 @@ apiClient.interceptors.response.use(
 
 // Typed API Layer (Basic structure placeholders)
 export const soilApi = {
-  async getSoilObservation(coords: Coordinate): Promise<SoilObservation> {
+  async getSoilObservation(coords: Coordinate): Promise<SoilObservation | null> {
     try {
       const response = await apiClient.get<SoilObservation>('/soil', {
         params: {
@@ -56,6 +56,9 @@ export const soilApi = {
           longitude: coords.longitude,
         },
       })
+      if (response.status === 204 || !response.data) {
+        return null
+      }
       return response.data
     } catch (e) {
       logger.error('Failed to get soil observation:', e)
