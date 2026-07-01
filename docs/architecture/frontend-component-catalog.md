@@ -60,3 +60,35 @@ By default, the WebGIS client does **NOT** display thematic property maps (such 
 *   The primary product of this platform is the **Spatial Soil Observation** (raw point query resolving profile verticality).
 *   The basemap overlays display the active soil classification units (MVT polygons or raster masks).
 *   Properties are inspected interactively in the `ScientificInfoPanel` to prevent scientific interpolation misrepresentations.
+
+---
+
+## 4. Responsive Layout Manager
+
+To support various user environments (field researchers on tablets, office scientists on dual 4K monitors, and field workers on mobile phones), the UI implements a dynamic **Layout Manager**:
+
+### A. Responsive Breakpoint Layout Rules
+*   **Desktop & Large Monitors**:
+    *   *SidebarPanel*: Fixed width (360px), docked left.
+    *   *ScientificInfoPanel*: Resizable split pane docked bottom (occupying 40% height) or docked right (occupying 30% width).
+    *   *Floating Panels*: User can pop out secondary tools (e.g. dynamic chart comparison, query logs) into floating, draggable windows.
+*   **Tablets (Landscape/Portrait)**:
+    *   *SidebarPanel*: Collapsible drawer overlays map. Swiping from the left edge pulls it out.
+    *   *ScientificInfoPanel*: Sliding bottom drawer. Capped at 50% height with touch handle.
+*   **Mobile Devices**:
+    *   *Single-Panel focus mode*: Map fills screen by default. Selecting a coordinate opens the `ScientificInfoPanel` as a full-screen modal overlays, with tab-bar switching at the bottom. Sidebar controls open via hamburger buttons.
+
+---
+
+## 5. Scientific Display Profiles
+
+To prevent cluttering the interface with irrelevant columns, users select a **Display Profile** that shapes the content displayed in the panels. Rather than custom CSS overrides, this is driven by Zustand store visibility filter arrays:
+
+| Display Profile | Primary Focused Sections | Hidden/Collapsed Sections | Target User Audience |
+| :--- | :--- | :--- | :--- |
+| **`Simple`** | Classification, Top-layer Texture, Water Regime description | Deep chemical properties, Hydraulic properties | General public, education |
+| **`Research`** | Full Taxonomy, C:N Ratios, CEC Soil/Clay, Environmental Context | None (All fields expanded) | Soil scientists, climatologists |
+| **`Agriculture`** | Root depths obstacles, Land Limitations, pH, Nitrogen, Organic Carbon | Bulk densities, SOTER classifications | Agronomists, farmers, planners |
+| **`Engineering`** | Bulk Density, Coarse Fragments, Impermeable Layer, Soil Texture | Organic carbon, WRB phases, C:N ratio | Civil engineers, site planners |
+| **`Developer`** | All attributes + raw `codes` blocks, latency metrics, SMU metadata | None | API integrators, system testers |
+

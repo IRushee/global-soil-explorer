@@ -72,3 +72,45 @@ No scientific computations (such as calculating clay/silt ratios, interpolating 
 
 *   The UI acts strictly as a **presentation layer** for the scientific JSON payloads.
 *   Formatting logic (e.g. converting `pH` color codes, parsing coordinates to degrees-minutes-seconds, or formatting depth units) must reside exclusively inside the `utils/` directory and be verified by isolated client unit tests.
+
+---
+
+## 4. Query Pipeline
+
+To isolate data retrieval, mapping, and components, UI components are prohibited from calling the REST API directly. All requests traverse the structured **Frontend Query Pipeline**.
+
+### A. Lifecycle Architecture Diagram
+
+```
+[ User Interaction ] (Map click, coordinate search, filter slider change)
+         │
+         ▼
+[ Step 1: Validation ] (Coordinate range validation; parameters type-checking)
+         │
+         ▼
+[ Step 2: Cache Check ] (Queries React Query Cache for coordinates or layers)
+         ├── [ HIT ] ───► Skip Network ────────────────────────┐
+         └── [ MISS ] ──► Trigger Step 3                      │
+                                                              │
+[ Step 3: API Client ] (Sends HTTP GET /v1/soil with AbortController)  │
+         │                                                    │
+         ▼                                                    │
+[ Step 4: Adapter ] (Converts API JSON payload to standard domain types)
+         │                                                    │
+         ├────────────────────────────────────────────────────┘
+         ▼
+[ Step 5: State Store ] (Updates Zustand store with active observation details)
+         │
+         ▼
+[ Step 6: Presentation ] (UI components render standardized state variables)
+```
+
+### B. Pipeline Stage Definitions
+
+1.  **Validation**: Intercepts input values. Prevents making network calls if coordinates are out of bounds or malformed, reducing backend load.
+2.  **Cache (React Query)**: Caches responses in-memory keying by latitude, longitude, and active filters. If queried again, it resolves instantly.
+3.  **API Client**: Uses `axios` with an `AbortController` bound to the query key. If a user queries coordinates sequentially, previous uncompleted queries are cancelled immediately.
+4.  **Adapter**: Translates dataset-specific schemas to the client's internal standard `SoilObservation` interfaces. Handlers resolve missing attributes gracefully.
+5.  **State Store**: Zustand store holds the loaded observation data, selected layer configurations, and active coordinate indicators.
+6.  **Presentation**: React views read data strictly from store selectors, avoiding any fetch states, retry counters, or deserialization boilerplate.
+
