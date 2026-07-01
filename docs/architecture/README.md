@@ -96,4 +96,23 @@ Welcome to the architectural documentation for the Global Soil Explorer. This di
     *   [API Contract Verification](file:///Users/rushee/Projects/global-soil-explorer/docs/verification/api-contract-verification.md) - Performance metrics, payload benchmarks, and serialization latency audits.
     *   [Architecture Freeze Report](file:///Users/rushee/Projects/global-soil-explorer/docs/architecture/architecture-freeze-report.md) - Sign-off documentation and freeze declarations.
 
+### 14. UX Design System
+*   **Overview**: Visual layout, color palettes, interaction matrices, responsive grids, and accessibility rules.
+*   **Documentation**:
+    *   [UX Design Principles](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/design-principles.md) - Progressive disclosure and scientific integrity guidelines.
+    *   [Design System Specification](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/design-system.md) - Complete design tokens for colors, spacing, and typography.
+    *   [Interaction Guidelines](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/interaction-guidelines.md) - Hover, pressed, focus, and notification state rules.
+    *   [Responsive Design](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/responsive-design.md) - Mobile, tablet, laptop, and desktop breakpoint adaptations.
+    *   [Accessibility Guidelines](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/accessibility-guidelines.md) - Screen reader details, focus order, and WCAG AA checklist.
+    *   [Map Experience & Controls](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/map-experience.md) - Panning, zooming, compass rotation, and basemap selectors.
+    *   [Loading & Performance Strategy](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/loading-strategy.md) - Pulse skeletons placement, prefetching, and cancellation.
+    *   [Keyboard Shortcuts Specification](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/keyboard-shortcuts.md) - Shortcut key combinations matrix.
+    *   [Scientific Visualization Guidelines](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/visualization-guidelines.md) - Soil vertical horizons color mappings and depth charts axis conventions.
+    *   [Scientific Information Layout](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/scientific-information-layout.md) - Main observation panel layout and tab hierarchy.
+    *   [UX Performance Guidelines](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/performance-guidelines.md) - Telemetry targets, virtualization, and lazy routes.
+    *   [Frontend UX Quality Checklist](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/frontend-quality-checklist.md) - Verify checklist before freezing frontend milestones.
+    *   [Interaction State Matrix](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/interaction-state-matrix.md) - Trigger-to-feedback state mappings.
+    *   [Component State Matrix](file:///Users/rushee/Projects/global-soil-explorer/docs/ux/component-state-matrix.md) - Responsive hierarchies and performance indicators for toolbars/drawers.
+
+
 
