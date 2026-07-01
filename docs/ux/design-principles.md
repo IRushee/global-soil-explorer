@@ -19,3 +19,12 @@ This document defines the core user experience principles that must govern all f
 ## 4. Universal Accessibility (WCAG AA)
 *   **Dual Interaction Control**: Every action (selection, panning, viewport reset) must be triggerable via keyboard shortcuts and touch gesture loops, not just mouse clicks.
 *   **High Contrast & Screen Safety**: Color combinations must satisfy WCAG AA contrast ratios (minimum `4.5:1` for body text, `3:1` for large headers). Color blindness modes (Protanopia, Deuteranopia, Tritanopia) must be supported.
+
+## 5. Capabilities-Driven User Interface
+*   **No Hardcoded Exceptions**: UI elements (panels, charts, tabs, selectors) must never make assumptions based on hardcoded dataset IDs (e.g. `if (dataset === 'HWSD')`).
+*   **Dynamic UI Feature Toggles**: Features must be activated or deactivated dynamically based on runtime capability flags:
+    *   *Dataset Capabilities*: coordinate_query, viewport_rendering, multiple_profiles, multiple_layers, soil_texture, soil_chemistry, hydrology, terrain, 3d, exports, time_series, analysis.
+    *   *Renderer Capabilities*: vector_tiles, raster_tiles, point_selection, polygon_selection, hover, terrain, pitch, rotation, opacity, clustering.
+    *   *Study Area Capabilities*: country_boundaries, administrative_levels, offline_cache, search, bookmarks, measurements.
+*   If a capability flag evaluates to `false`, the associated UI control (e.g. the 3D terrain toggle or depth slider) must be hidden or cleanly disabled.
+
