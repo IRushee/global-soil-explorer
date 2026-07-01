@@ -20,10 +20,10 @@ Assess the current state of the global soil explorer backend components, highlig
 *   ✓ **Database Generation**: Implemented conversion pipeline mapping raw MDB files to SQLite with negative sentinel cleaning.
 *   ✓ **SQLite Repository**: Implemented concrete `SoilObservationRepository` retrieving data from `hwsd.db` and mapping to domain models.
 *   ✓ **SpatialLookupService** (Milestone 15): Resolves validated geographic coordinates to spatial IDs using direct `.bil` raster file seek operations with microseconds-level latency.
+*   ✓ **Application Service** (Milestone 16): Integrates lookup and repository layers into a cohesive business query orchestrator with custom exception handling and domain reconstruction.
 *   ✓ **Architecture**: Fully documented and frozen runtime architectures.
 
 ### 2. Pending Milestones
-*   □ **Application Service**: Integrate lookup and repository layers into a cohesive business query orchestrator.
 *   □ **REST API (FastAPI)**: Expose coordinates query endpoints.
 *   □ **Tile Service**: Implement map visualization raster/vector tile engine (independent of analytical queries).
 *   □ **Frontend (React/TypeScript)**: Build user dashboard, interactive map explorer, and profile charts.

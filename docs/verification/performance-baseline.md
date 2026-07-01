@@ -43,8 +43,32 @@ Latency metrics for resolving coordinate queries on the binary raster grid:
 *   **10000 Lookups**:
     *   Average: `0.010 ms` | Median: `0.001 ms` | Min: `0.001 ms` | Max: `0.793 ms` | 95th Percentile: `0.103 ms`
 
+### 4. Application Service Performance (Milestone 16)
+Latency metrics for the complete coordinated query pipeline (Coordinate → SpatialLookupService → Repository → Domain reconstruction) over valid land coordinates, including step breakdowns:
+
+*   **1 Query**:
+    *   **Total Pipeline**: Average: `14.606 ms` | Median: `14.606 ms` | Min: `14.606 ms` | Max: `14.606 ms` | 95th Percentile: `14.606 ms`
+    *   **1. Spatial Lookup**: Average: `0.007 ms`
+    *   **2. Repository DB Query**: Average: `13.683 ms`
+    *   **3. Domain Reconstruction**: Average: `0.056 ms`
+    *   **4. Application Orchestration**: Average: `0.860 ms`
+*   **100 Queries**:
+    *   **Total Pipeline**: Average: `14.760 ms` | Median: `14.696 ms` | Min: `13.875 ms` | Max: `16.046 ms` | 95th Percentile: `15.472 ms`
+    *   **1. Spatial Lookup**: Average: `0.004 ms`
+    *   **2. Repository DB Query**: Average: `14.458 ms`
+    *   **3. Domain Reconstruction**: Average: `0.239 ms`
+    *   **4. Application Orchestration**: Average: `0.197 ms`
+*   **1000 Queries**:
+    *   **Total Pipeline**: Average: `14.751 ms` | Median: `14.668 ms` | Min: `13.783 ms` | Max: `25.172 ms` | 95th Percentile: `15.407 ms`
+    *   **1. Spatial Lookup**: Average: `0.004 ms`
+    *   **2. Repository DB Query**: Average: `14.541 ms`
+    *   **3. Domain Reconstruction**: Average: `0.262 ms`
+    *   **4. Application Orchestration**: Average: `0.138 ms`
+
 ## Conclusion
 *   Offline database ingestion is extremely fast, executing under 15 seconds.
-*   Runtime lookups resolve in under 16 ms, with SQLite query time representing the primary latency component (~92.3%) and domain mapping taking less than 1.2 ms (~7.7%).
-*   Spatial lookup is highly optimized, completing individual coordinate resolutions in under 10 microseconds on average.
+*   Runtime lookups resolve in under 16 ms, with SQLite query execution representing the primary latency component (~98.6% of E2E pipeline) and domain mapping/reconstruction taking less than 0.3 ms (~1.8%).
+*   Spatial lookup is highly optimized, completing individual coordinate resolutions in under 5 microseconds (~0.03%) on average.
+*   Application orchestration overhead is negligible, taking less than 0.2 ms on average (~0.9%).
+*   Coordinated Application Service queries resolve in ~14.7 ms on average, demonstrating minimal overhead over direct repository lookups and satisfying runtime constraints.
 *   These measurements serve as baselines only. Actual performance depends on target deployment hardware.
