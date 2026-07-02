@@ -241,6 +241,7 @@ export interface MapRenderer {
   removeLayer(layerId: string): void
   on(event: 'click' | 'zoomend' | 'moveend' | 'mousemove', handler: (e: any) => void): void
   destroy(): void
+  resize(): void
 }
 
 export interface StudyArea {

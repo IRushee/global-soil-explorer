@@ -14,42 +14,86 @@ export const ObservationSummary: React.FC<ObservationSummaryProps> = ({
   datasetId,
 }) => {
   const profileCount = observation.profiles?.length || 0
-  const coverage = observation.metadata?.coverage_description || 'Global Coverage'
-  const version = observation.metadata?.dataset_version || 'v2.0'
-  const source = observation.metadata?.source || 'HWSD'
+  const metadata = observation.metadata
+  const coverage = metadata?.coverage_description || 'Global Coverage'
+  const version = metadata?.dataset_version || 'v2.0'
+  const source = metadata?.source || 'HWSD'
+  const library = metadata?.library
+  const coverageCode = metadata?.codes?.coverage
+
+  const formatLatitude = (lat: number) => {
+    const suffix = lat >= 0 ? 'N' : 'S'
+    return `${Math.abs(lat).toFixed(6)}° ${suffix}`
+  }
+
+  const formatLongitude = (lon: number) => {
+    const suffix = lon >= 0 ? 'E' : 'W'
+    return `${Math.abs(lon).toFixed(6)}° ${suffix}`
+  }
 
   return (
-    <div className="border border-slate-800 bg-slate-900/50 p-4 rounded-lg flex flex-col gap-3 shadow-md">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-        <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Observation Summary</span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 font-medium">
-          Resolved
-        </span>
+    <div className="bg-theme-btn-bg/20 border border-theme-border p-4 rounded-2xl flex flex-col gap-3.5 shadow-sm hover-float">
+      <div className="border-b border-theme-border pb-2">
+        <h2 className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider block">Observation & Dataset Info</h2>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs leading-relaxed">
-        <div className="flex flex-col">
-          <span className="text-slate-500">Latitude</span>
-          <span className="font-mono text-slate-300">{selectedCoordinate.latitude.toFixed(6)}°</span>
+
+      {/* Coordinates Row */}
+      <div className="flex gap-4 items-center">
+        <div className="flex-1">
+          <span className="text-[10px] text-theme-text-muted font-medium uppercase tracking-wider block mb-0.5">Latitude</span>
+          <span className="font-mono text-xs font-semibold text-theme-text">{formatLatitude(selectedCoordinate.latitude)}</span>
         </div>
-        <div className="flex flex-col">
-          <span className="text-slate-500">Longitude</span>
-          <span className="font-mono text-slate-300">{selectedCoordinate.longitude.toFixed(6)}°</span>
+        <div className="flex-1 border-l border-theme-border pl-4">
+          <span className="text-[10px] text-theme-text-muted font-medium uppercase tracking-wider block mb-0.5">Longitude</span>
+          <span className="font-mono text-xs font-semibold text-theme-text">{formatLongitude(selectedCoordinate.longitude)}</span>
         </div>
-        <div className="flex flex-col col-span-2 pt-1 border-t border-slate-850/50">
-          <span className="text-slate-500">Dataset</span>
-          <span className="text-slate-350 font-medium uppercase">{datasetId.replace('_', ' ')} (v{version})</span>
+      </div>
+
+      {/* Dataset Info List */}
+      <div className="flex flex-col gap-1.5 text-xs pt-1.5 border-t border-theme-border">
+        <div className="flex justify-between items-center py-0.5">
+          <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Dataset</span>
+          <span className="font-semibold text-theme-text uppercase">{datasetId.replace('_', ' ')} (v{version})</span>
         </div>
-        <div className="flex flex-col">
-          <span className="text-slate-500">Profiles Found</span>
-          <span className="text-slate-300">{profileCount} {profileCount === 1 ? 'profile' : 'profiles'}</span>
+        {library && (
+          <div className="flex justify-between items-center py-0.5">
+            <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Methodology</span>
+            <span className="font-medium text-theme-text">{library}</span>
+          </div>
+        )}
+        <div className="flex justify-between items-center py-0.5">
+          <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Source</span>
+          <span className="font-medium text-theme-text italic">{source}</span>
         </div>
-        <div className="flex flex-col">
-          <span className="text-slate-500">Source</span>
-          <span className="text-slate-300 italic">{source}</span>
+        <div className="flex justify-between items-center py-0.5">
+          <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Profiles Found</span>
+          <span className="font-semibold text-theme-text">{profileCount} {profileCount === 1 ? 'profile' : 'profiles'}</span>
         </div>
-        <div className="col-span-2 flex flex-col pt-1 border-t border-slate-850/50">
-          <span className="text-slate-500">Coverage Description</span>
-          <span className="text-slate-300 text-[11px]">{coverage}</span>
+      </div>
+
+      {/* Coverage & Spatial Identifiers Row */}
+      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-theme-border">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-theme-text-muted text-[9px] uppercase font-bold tracking-wider block mb-0.5">Coverage</span>
+          <p className="text-[11px] text-theme-text-sec leading-normal font-medium">
+            {coverage} {coverageCode ? `(Code: ${coverageCode})` : ''}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1 border-l border-theme-border pl-4">
+          <span className="text-[9px] text-theme-text-muted font-bold tracking-wider uppercase block mb-0.5">Spatial Identifiers</span>
+          {metadata?.reference_identifiers && metadata.reference_identifiers.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {metadata.reference_identifiers.map(([key, val], idx) => (
+                <div key={idx} className="px-1.5 py-0.5 bg-theme-btn-bg border border-theme-border rounded-lg text-[9px] font-mono flex gap-1 items-center select-all">
+                  <span className="text-theme-text-muted text-[8px] uppercase font-sans font-semibold">{key}:</span>
+                  <span className="text-teal-655 dark:text-teal-400 font-semibold">{val}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span className="text-[10px] text-theme-text-muted italic">None</span>
+          )}
         </div>
       </div>
     </div>
@@ -61,9 +105,7 @@ interface ProfileSelectorProps {
   profiles: SoilProfile[]
   activeIndex: number
   onChange: (index: number) => void
-}
-
-export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
+}export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   profiles,
   activeIndex,
   onChange,
@@ -71,9 +113,9 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
   if (!profiles || profiles.length <= 1) return null
 
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold text-slate-400 tracking-wide">Mapping Unit Components:</span>
-      <div className="flex flex-wrap gap-1.5 border-b border-slate-800 pb-3">
+    <div className="flex flex-col gap-2 font-sans">
+      <h2 className="text-xs font-semibold text-theme-text-sec tracking-wide text-center">Mapping Unit Components:</h2>
+      <div className="flex flex-wrap justify-center gap-2 p-1.5 rounded-2xl bg-theme-btn-bg/30 border border-theme-border">
         {profiles.map((profile, idx) => {
           const shareVal = profile.composition_share !== null && profile.composition_share !== undefined
             ? (profile.composition_share <= 1 ? Math.round(profile.composition_share * 100) : Math.round(profile.composition_share))
@@ -85,10 +127,10 @@ export const ProfileSelector: React.FC<ProfileSelectorProps> = ({
             <button
               key={idx}
               onClick={() => onChange(idx)}
-              className={`text-xs px-3 py-1.5 rounded-md transition-all font-medium border ${
+              className={`text-[11px] px-3.5 py-1.5 rounded-xl transition-all duration-200 font-medium cursor-pointer shadow-xs ${
                 isActive
-                  ? 'bg-teal-950/30 text-teal-400 border-teal-800/80 shadow-md font-semibold'
-                  : 'bg-slate-800/40 text-slate-400 border-transparent hover:bg-slate-800 hover:text-slate-200'
+                  ? 'bg-teal-500/10 text-teal-650 dark:text-teal-400 font-semibold border border-teal-500/20'
+                  : 'bg-theme-card border border-theme-border text-theme-btn-text hover:text-theme-text hover:bg-theme-btn-bg/60'
               }`}
             >
               {name}{shareStr}
@@ -114,100 +156,131 @@ export const LayerCard: React.FC<LayerCardProps> = ({
   isActive,
   onClick,
 }) => {
-  const getPropertyValue = (layer: any, type: string): number | null => {
-    if (layer.measurements) {
-      if (type === 'ph') return layer.measurements.chemical?.ph ?? null
-      if (type === 'organic_carbon') return layer.measurements.chemical?.organic_carbon ?? null
-    }
-    if (layer.properties && Array.isArray(layer.properties)) {
-      const prop = layer.properties.find((p: any) => p.property_type.toLowerCase() === type.toLowerCase())
-      return prop ? prop.value : null
-    }
-    return null
-  }
-
-  const ph = getPropertyValue(layer, 'ph')
-  const oc = getPropertyValue(layer, 'organic_carbon')
-
   return (
     <div
       onClick={onClick}
-      className={`border rounded-lg p-3.5 flex flex-col gap-2 transition-all cursor-pointer select-none shadow-sm ${
+      className={`border p-3 flex flex-col gap-1 transition-all duration-200 cursor-pointer select-none rounded-xl shadow-sm ${
         isActive
-          ? 'bg-teal-950/20 border-teal-800/80 shadow-md ring-1 ring-teal-900/50'
-          : 'bg-slate-900/30 border-slate-800 hover:border-slate-700 hover:bg-slate-800/20'
+          ? 'bg-slate-900/45 border-l-2 border-l-teal-500 border-t-slate-800/40 border-r-slate-800/40 border-b-slate-800/40'
+          : 'bg-slate-900/20 border-slate-800/40 hover:border-slate-700/40 hover:bg-slate-800/10'
       }`}
     >
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center text-xs">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-semibold text-slate-500">#{index + 1}</span>
-          <span className="font-semibold text-slate-200 text-sm">
+          <span className="text-[10px] font-mono font-medium text-slate-500">Horizon #{index + 1}</span>
+          <span className={`font-semibold ${isActive ? 'text-teal-400' : 'text-slate-200'}`}>
             {layer.top_depth_cm} - {layer.bottom_depth_cm} cm
           </span>
         </div>
-        <span className="text-[10px] text-slate-500 font-mono">
+        <span className="text-[10px] text-slate-500 font-mono font-light">
           {layer.bottom_depth_cm - layer.top_depth_cm} cm thick
         </span>
       </div>
-
-      <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-        <div>
-          <span className="text-slate-500">pH (H₂O):</span>{' '}
-          <span className="font-mono font-semibold text-slate-300">
-            {ph !== null ? ph.toFixed(2) : 'N/A'}
-          </span>
-        </div>
-        <div>
-          <span className="text-slate-500">Org. Carbon:</span>{' '}
-          <span className="font-mono font-semibold text-slate-300">
-            {oc !== null ? `${oc.toFixed(2)}%` : 'N/A'}
-          </span>
-        </div>
-      </div>
     </div>
   )
 }
 
-// 4. LayerList
-interface LayerListProps {
-  layers: SoilLayer[]
-  activeLayerIndex: number | null
-  onLayerSelect: (index: number | null) => void
-}
-
-export const LayerList: React.FC<LayerListProps> = ({
-  layers,
-  activeLayerIndex,
-  onLayerSelect,
-}) => {
-  if (!layers || layers.length === 0) {
-    return <div className="text-xs text-slate-500 italic">No depth layers available.</div>
-  }
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      <span className="text-xs font-semibold text-slate-400 tracking-wide">Soil Layers (Horizons):</span>
-      <div className="flex flex-col gap-2">
-        {layers.map((layer, idx) => (
-          <LayerCard
-            key={idx}
-            layer={layer}
-            index={idx}
-            isActive={idx === activeLayerIndex}
-            onClick={() => onLayerSelect(idx === activeLayerIndex ? null : idx)}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
+// LayerList relocated below ScientificPropertyTable to allow embedding it.
 
 // 5. ScientificPropertyTable
 interface ScientificPropertyTableProps {
   layer: SoilLayer
 }
 
+export const PROPERTY_DEFINITIONS: Record<
+  string,
+  { label: string; definition: string; significance: string }
+> = {
+  sand: {
+    label: 'Sand Fraction (0.05 - 2.0 mm)',
+    definition: 'Coarse mineral particles. Sand creates large pores, allowing rapid water drainage and air circulation, but holds very little water or nutrients.',
+    significance: 'High sand makes soil easy to till but dry and prone to nutrient leaching.',
+  },
+  silt: {
+    label: 'Silt Fraction (0.002 - 0.05 mm)',
+    definition: 'Medium-sized mineral particles that feel like flour. Silt holds moderate water and nutrients and is highly susceptible to water erosion.',
+    significance: 'Silt provides good structure and moisture retention, but can compact easily, reducing air flow.',
+  },
+  clay: {
+    label: 'Clay Fraction (< 0.002 mm)',
+    definition: 'Microscopic mineral particles with vast surface areas and negative electrical charges that bind water and essential plant nutrients.',
+    significance: 'High clay gives soil high nutrient and water capacity, but makes it sticky when wet and hard/cracked when dry, restricting root growth.',
+  },
+  bd: {
+    label: 'Bulk Density',
+    definition: 'The mass of dry soil divided by its total volume (including pore space).',
+    significance: 'High bulk density (>1.6 g/cm³) indicates soil compaction, which restricts root growth, water movement, and oxygen availability.',
+  },
+  rbd: {
+    label: 'Reference Bulk Density',
+    definition: 'A standardized baseline bulk density for the soil type, used for comparison and to calculate stocks (e.g. soil carbon stocks).',
+    significance: 'Used by researchers to evaluate compaction levels and estimate total nutrient weights per hectare.',
+  },
+  coarse: {
+    label: 'Coarse Fragments',
+    definition: 'Rock, gravel, and stones larger than 2 mm in diameter in the soil layer.',
+    significance: 'High coarse fragments reduce the volume of active, fine soil. This limits the total amount of water and nutrients the soil can store.',
+  },
+  awc: {
+    label: 'Available Water Capacity (AWC)',
+    definition: 'The maximum amount of water a soil can store that is actually available for plants to absorb.',
+    significance: 'High AWC acts as a buffer, allowing crops to survive longer periods without rain or irrigation.',
+  },
+  ph: {
+    label: 'pH (H₂O)',
+    definition: 'A measure of the acidity or alkalinity of the soil in water.',
+    significance: 'Controls nutrient availability. Most crops prefer pH 6.0 to 7.5. Acidic soils (<5.5) can lock nutrients and cause aluminum toxicity; alkaline soils (>8.0) can lock phosphorus and iron.',
+  },
+  oc: {
+    label: 'Organic Carbon',
+    definition: 'The carbon contained within decomposed plant residues, animal waste, and soil microbes.',
+    significance: 'The core indicator of soil fertility. It improves water holding, holds soil aggregates together, and feeds beneficial soil microbes.',
+  },
+  tn: {
+    label: 'Total Nitrogen',
+    definition: 'The sum of all nitrogen forms (organic and inorganic) present in the soil.',
+    significance: 'A primary nutrient crucial for leaf growth, protein synthesis, and photosynthesis. Most nitrogen is stored in organic matter.',
+  },
+  cn: {
+    label: 'C/N Ratio',
+    definition: 'The ratio of organic carbon to nitrogen in the soil.',
+    significance: 'Indicates how fast organic matter decomposes. A ratio of 10-12 is ideal. Ratios >20 slow down decomposition and temporarily lock up nitrogen; ratios <10 release nitrogen rapidly.',
+  },
+  cecSoil: {
+    label: 'Cation Exchange Capacity (CEC) Soil',
+    definition: 'A measure of how many positively charged nutrients (cations like Calcium, Magnesium, Potassium) the soil can hold and exchange.',
+    significance: "The soil's 'nutrient reservoir'. Soils with high CEC can retain more nutrients and resist acidification.",
+  },
+  cecClay: {
+    label: 'CEC Clay',
+    definition: 'The cation exchange capacity specifically of the clay mineral portion of the soil.',
+    significance: 'Helps identify clay mineral types. High CEC clays swell and shrink; low CEC clays are stable but less fertile.',
+  },
+  bs: {
+    label: 'Base Saturation',
+    definition: 'The percentage of the soil exchange complex occupied by basic nutrients (Ca, Mg, K, Na) instead of acidic ions (H, Al).',
+    significance: 'High base saturation (>50%) indicates highly fertile, non-acidic soil with abundant nutrients for plants.',
+  },
+  ec: {
+    label: 'Electrical Conductivity (EC)',
+    definition: 'A measure of how easily electricity passes through a soil-water solution, reflecting salt content.',
+    significance: 'Indicates salinity. High salinity (>2-4 dS/m) makes it hard for plant roots to draw water, reducing crop yields.',
+  },
+  caco3: {
+    label: 'Calcium Carbonate (CaCO₃)',
+    definition: 'The lime content of the soil.',
+    significance: 'Helps neutralize acid. High CaCO₃ can keep pH alkaline (~8.2) and lock up key nutrients like phosphorus and iron.',
+  },
+  gypsum: {
+    label: 'Gypsum (CaSO₄·2H₂O)',
+    definition: 'A moderately soluble calcium sulfate mineral common in arid regions.',
+    significance: 'Improves structure in sodic/compacted soils. However, extreme levels (>15%) can cause soil instability or sinkholes and limit roots.',
+  },
+}
+
 export const ScientificPropertyTable: React.FC<ScientificPropertyTableProps> = ({ layer }) => {
+  const [selectedProp, setSelectedProp] = React.useState<string | null>(null)
+
   const getPropertyValue = (layer: any, path: string[], fallbackName: string): { value: number | null; unit: string } => {
     let current = layer
     for (const key of path) {
@@ -257,37 +330,77 @@ export const ScientificPropertyTable: React.FC<ScientificPropertyTableProps> = (
     return `${v.toFixed(2)}${unit ? ' ' + unit : ''}`
   }
 
+  const rows: {
+    key: string
+    label: string
+    value: number | null
+    unit: string
+    formatter?: (v: number | null, u: string) => string
+  }[] = [
+    { key: 'bd', label: 'Bulk Density', value: bd.value, unit: bd.unit || 'g/cm³' },
+    { key: 'rbd', label: 'Reference Bulk Density', value: rbd.value, unit: rbd.unit || 'g/cm³' },
+    { key: 'coarse', label: 'Coarse Fragments', value: coarse.value, unit: coarse.unit || '%' },
+    { key: 'awc', label: 'Available Water Capacity', value: awc.value, unit: awc.unit || '%' },
+    { key: 'ph', label: 'pH (H₂O)', value: ph.value, unit: '', formatter: (v: number | null, _u: string) => v !== null ? v.toFixed(2) : 'N/A' },
+    { key: 'oc', label: 'Organic Carbon', value: oc.value, unit: oc.unit || '%' },
+    { key: 'tn', label: 'Total Nitrogen', value: tn.value, unit: tn.unit || '%' },
+    { key: 'cn', label: 'C/N Ratio', value: cn.value, unit: cn.unit },
+    { key: 'cecSoil', label: 'CEC Soil', value: cecSoil.value, unit: cecSoil.unit || 'cmol/kg' },
+    { key: 'cecClay', label: 'CEC Clay', value: cecClay.value, unit: cecClay.unit || 'cmol/kg' },
+    { key: 'bs', label: 'Base Saturation', value: bs.value, unit: bs.unit || '%' },
+    { key: 'ec', label: 'Electrical Conductivity (EC)', value: ec.value, unit: ec.unit || 'dS/m' },
+    { key: 'caco3', label: 'Calcium Carbonate', value: caco3.value, unit: caco3.unit || '%' },
+    { key: 'gypsum', label: 'Gypsum', value: gypsum.value, unit: gypsum.unit || '%' },
+  ]
+
   return (
-    <div className="border border-slate-800 bg-slate-900/30 rounded-lg p-4 flex flex-col gap-4 shadow-sm">
-      <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-1.5">
+    <div className="bg-theme-card border border-theme-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm select-none hover-float">
+      <h2 className="text-xs font-semibold text-theme-text uppercase tracking-wider border-b border-theme-border-sec pb-1.5 block">
         Horizon Measurements ({layer.top_depth_cm} - {layer.bottom_depth_cm} cm)
-      </span>
+      </h2>
 
       {/* Texture Display */}
       {(sand.value !== null || silt.value !== null || clay.value !== null) && (
-        <div className="flex flex-col gap-1.5 pb-3 border-b border-slate-855/55">
-          <span className="text-slate-450 font-medium text-xs">Soil Texture Fractions:</span>
-          <div className="flex w-full h-3 rounded-full overflow-hidden bg-slate-800/85 border border-slate-750">
+        <div className="flex flex-col gap-1.5 pb-2.5 border-b border-theme-border-sec">
+          <div className="flex w-full h-1.5 rounded-full overflow-hidden bg-theme-btn-bg border border-theme-btn-border">
             {sand.value !== null && (
-              <div style={{ width: `${sand.value}%` }} className="bg-amber-500 h-full" title={`Sand: ${sand.value}%`} />
+              <div style={{ width: `${sand.value}%` }} className="bg-amber-500/80 h-full" title={`Sand: ${sand.value}%`} />
             )}
             {silt.value !== null && (
-              <div style={{ width: `${silt.value}%` }} className="bg-slate-450 h-full" title={`Silt: ${silt.value}%`} />
+              <div style={{ width: `${silt.value}%` }} className="bg-slate-400/80 h-full" title={`Silt: ${silt.value}%`} />
             )}
             {clay.value !== null && (
-              <div style={{ width: `${clay.value}%` }} className="bg-red-500 h-full" title={`Clay: ${clay.value}%`} />
+              <div style={{ width: `${clay.value}%` }} className="bg-red-500/80 h-full" title={`Clay: ${clay.value}%`} />
             )}
           </div>
-          <div className="flex justify-between text-[10px] font-mono text-slate-450">
-            <span className="flex items-center gap-1.5">
+          <div className="flex justify-between text-[10px] font-mono text-theme-text-muted">
+            <span
+              onClick={() => setSelectedProp(selectedProp === 'sand' ? null : 'sand')}
+              className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg cursor-pointer hover:bg-theme-btn-bg/50 transition-colors ${
+                selectedProp === 'sand' ? 'bg-amber-500/10 text-amber-500 font-semibold' : ''
+              }`}
+              title="Click to explain Sand"
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
               Sand: {sand.value !== null ? `${sand.value.toFixed(1)}%` : 'N/A'}
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-450 inline-block"></span>
+            <span
+              onClick={() => setSelectedProp(selectedProp === 'silt' ? null : 'silt')}
+              className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg cursor-pointer hover:bg-theme-btn-bg/50 transition-colors ${
+                selectedProp === 'silt' ? 'bg-slate-400/10 text-slate-500 dark:text-slate-300 font-semibold' : ''
+              }`}
+              title="Click to explain Silt"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span>
               Silt: {silt.value !== null ? `${silt.value.toFixed(1)}%` : 'N/A'}
             </span>
-            <span className="flex items-center gap-1.5">
+            <span
+              onClick={() => setSelectedProp(selectedProp === 'clay' ? null : 'clay')}
+              className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg cursor-pointer hover:bg-theme-btn-bg/50 transition-colors ${
+                selectedProp === 'clay' ? 'bg-red-500/10 text-red-500 font-semibold' : ''
+              }`}
+              title="Click to explain Clay"
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
               Clay: {clay.value !== null ? `${clay.value.toFixed(1)}%` : 'N/A'}
             </span>
@@ -295,90 +408,116 @@ export const ScientificPropertyTable: React.FC<ScientificPropertyTableProps> = (
         </div>
       )}
 
-      {/* Grid Table of Attributes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs leading-relaxed">
-        {/* Physical block */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Physical Properties</span>
-          <div className="flex justify-between border-b border-slate-850/50 pb-1">
-            <span className="text-slate-450">Bulk Density:</span>
-            <span className="font-mono text-slate-200">{formatVal(bd.value, bd.unit || 'g/cm³')}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-450">Ref Bulk Density:</span>
-            <span className="font-mono text-slate-200">{formatVal(rbd.value, rbd.unit || 'g/cm³')}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-450">Coarse Fragments:</span>
-            <span className="font-mono text-slate-200">{formatVal(coarse.value, coarse.unit || '%')}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-450">Available Water:</span>
-            <span className="font-mono text-slate-200">{formatVal(awc.value, awc.unit || '%')}</span>
-          </div>
-        </div>
-
-        {/* Chemical block */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Chemical Properties</span>
-          <div className="flex justify-between border-b border-slate-850/50 pb-1">
-            <span className="text-slate-450">pH (H₂O):</span>
-            <span className="font-mono text-slate-200">{ph.value !== null ? ph.value.toFixed(2) : 'N/A'}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-450">Organic Carbon:</span>
-            <span className="font-mono text-slate-200">{formatVal(oc.value, oc.unit || '%')}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-450">Total Nitrogen:</span>
-            <span className="font-mono text-slate-200">{formatVal(tn.value, tn.unit || '%')}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-450">C/N Ratio:</span>
-            <span className="font-mono text-slate-200">{formatVal(cn.value, cn.unit)}</span>
-          </div>
-        </div>
-
-        {/* Extra Chemical block */}
-        <div className="col-span-1 sm:col-span-2 flex flex-col gap-1.5 pt-2 border-t border-slate-800">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">CEC & Exchange Complex</span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <div className="flex justify-between border-b border-slate-855 pb-1 sm:pb-0.5">
-              <span className="text-slate-450">CEC Soil:</span>
-              <span className="font-mono text-slate-200">{formatVal(cecSoil.value, cecSoil.unit || 'cmol/kg')}</span>
+      {/* Tight single column parameters list */}
+      <div className="flex flex-col gap-1 text-[11px] leading-relaxed">
+        {rows.map((row) => {
+          const isSelected = selectedProp === row.key
+          return (
+            <div
+              key={row.key}
+              onClick={() => setSelectedProp(isSelected ? null : row.key)}
+              className={`flex justify-between cursor-pointer hover:bg-theme-btn-bg/50 px-1.5 py-0.5 rounded-lg transition-all ${
+                isSelected
+                  ? 'bg-teal-500/10 text-teal-650 dark:text-teal-400 font-semibold border-l-2 border-teal-500 pl-2'
+                  : 'text-theme-text-sec'
+              }`}
+              title={`Click to explain ${row.label}`}
+            >
+              <span className={isSelected ? 'text-teal-650 dark:text-teal-400 font-semibold' : 'text-theme-text-muted font-light'}>
+                {row.label}:
+              </span>
+              <span className="font-mono text-theme-text">
+                {row.formatter ? row.formatter(row.value, row.unit) : formatVal(row.value, row.unit)}
+              </span>
             </div>
-            <div className="flex justify-between border-b border-slate-855 pb-1 sm:pb-0.5">
-              <span className="text-slate-450">CEC Clay:</span>
-              <span className="font-mono text-slate-200">{formatVal(cecClay.value, cecClay.unit || 'cmol/kg')}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-855 pb-1 sm:border-none sm:pb-0">
-              <span className="text-slate-450">Base Saturation:</span>
-              <span className="font-mono text-slate-200">{formatVal(bs.value, bs.unit || '%')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-450">Elec. Conductivity (EC):</span>
-              <span className="font-mono text-slate-200">{formatVal(ec.value, ec.unit || 'dS/m')}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Minerals block */}
-        {(caco3.value !== null || gypsum.value !== null) && (
-          <div className="col-span-1 sm:col-span-2 flex flex-col gap-1.5 pt-2 border-t border-slate-800">
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Salts & Carbonates</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <div className="flex justify-between border-b border-slate-855 pb-1 sm:border-none sm:pb-0">
-                <span className="text-slate-450">Calcium Carbonate:</span>
-                <span className="font-mono text-slate-200">{formatVal(caco3.value, caco3.unit || '%')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-450">Gypsum:</span>
-                <span className="font-mono text-slate-200">{formatVal(gypsum.value, gypsum.unit || '%')}</span>
-              </div>
-            </div>
-          </div>
-        )}
+          )
+        })}
       </div>
+
+      {/* Interactive Glossary Detail Card */}
+      {selectedProp && PROPERTY_DEFINITIONS[selectedProp] ? (
+        <div className="mt-2 p-3.5 bg-teal-50/50 dark:bg-teal-955/15 backdrop-blur-sm border-l-2 border-l-teal-500 rounded-r-xl text-xs leading-relaxed transition-all duration-200 shadow-md">
+          <div className="flex justify-between items-center mb-1 border-b border-teal-900/20 pb-0.5">
+            <span className="font-bold text-teal-600 dark:text-teal-400 text-[11px] tracking-wide">
+              {PROPERTY_DEFINITIONS[selectedProp].label}
+            </span>
+            <button
+              onClick={() => setSelectedProp(null)}
+              className="text-[10px] text-theme-text-muted hover:text-theme-text cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+          <p className="text-theme-text-sec font-normal mb-1.5 leading-normal">
+            {PROPERTY_DEFINITIONS[selectedProp].definition}
+          </p>
+          <div className="text-theme-text-muted text-[11px] leading-normal">
+            <span className="text-teal-600 dark:text-teal-500/70 font-bold tracking-wider text-[9px] uppercase mr-1 inline-block">
+              Significance:
+            </span>
+            {PROPERTY_DEFINITIONS[selectedProp].significance}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-0.5 text-center text-[10px] text-theme-text-muted italic select-none">
+          💡 Tip: Click any row or texture label to view its scientific explanation.
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface LayerListProps {
+  layers: SoilLayer[]
+  activeLayerIndex: number | null
+  onLayerSelect: (index: number | null) => void
+}
+
+export const LayerList: React.FC<LayerListProps> = ({
+  layers,
+  activeLayerIndex,
+  onLayerSelect,
+}) => {
+  if (!layers || layers.length === 0) {
+    return <div className="text-xs text-theme-text-muted italic">No depth layers available.</div>
+  }
+
+  const selectedLayer = activeLayerIndex !== null ? layers[activeLayerIndex] : null
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-xs font-semibold text-theme-text-sec tracking-wide">Select Depth Layer</h2>
+        <div className="grid grid-cols-4 gap-1.5">
+          {layers.map((layer: SoilLayer, idx: number) => {
+            const isActive = idx === activeLayerIndex
+            return (
+              <button
+                key={idx}
+                onClick={() => onLayerSelect(isActive ? null : idx)}
+                className={`py-2 px-1 rounded-xl text-center border text-[11px] font-medium transition-all duration-200 cursor-pointer select-none ${
+                  isActive
+                    ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400 font-semibold shadow-sm'
+                    : 'bg-theme-btn-bg border-theme-btn-border text-theme-btn-text hover:text-theme-text hover:bg-theme-btn-bg/80'
+                }`}
+              >
+                <div className="text-[9px] text-theme-text-muted font-mono leading-none mb-0.5">#{idx + 1}</div>
+                <div className="font-semibold leading-none text-[10px]">{layer.top_depth_cm}-{layer.bottom_depth_cm}</div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {selectedLayer ? (
+        <div className="transition-all duration-300 ease-in-out">
+          <ScientificPropertyTable layer={selectedLayer} />
+        </div>
+      ) : (
+        <div className="text-center py-6 border border-dashed border-theme-border rounded-2xl text-[11px] text-theme-text-muted italic bg-theme-card select-none">
+          👆 Select a depth layer button above to view scientific measurements.
+        </div>
+      )}
     </div>
   )
 }
@@ -394,44 +533,57 @@ export const ClassificationCard: React.FC<ClassificationCardProps> = ({ profile 
   const limitations = profile.land_limitations
 
   return (
-    <div className="border border-slate-800 bg-slate-900/30 rounded-lg p-4 flex flex-col gap-4 shadow-sm">
-      <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-1.5">
+    <div className="bg-theme-card border border-theme-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm select-none hover-float">
+      <h2 className="text-xs font-semibold text-theme-text uppercase tracking-wider border-b border-theme-border-sec pb-1.5 block">
         Soil Classification & Context
-      </span>
+      </h2>
 
       {/* Taxonomy Section */}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Taxonomic Name</span>
-        <div className="text-slate-200 font-semibold text-sm">{classification.class_name}</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 mt-1">
-          {classification.taxonomy_standard && (
-            <div>
-              <span className="text-slate-500">Standard:</span> {classification.taxonomy_standard}
+      <div className="flex flex-col gap-3">
+        {/* Main Taxonomic Name and Symbol Code with prominent emphasis */}
+        <div className="flex items-start justify-between gap-3 pb-2 border-b border-theme-border-sec">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-theme-text-muted font-semibold uppercase tracking-wider">Taxonomic Name</span>
+            <div className="text-theme-text font-bold text-sm select-all">{classification.class_name}</div>
+          </div>
+          {classification.codes.class_symbol && (
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[10px] text-theme-text-muted font-semibold uppercase tracking-wider">Symbol</span>
+              <span className="px-2.5 py-0.5 bg-teal-500/10 text-teal-650 dark:text-teal-400 font-mono font-bold text-xs rounded-lg border border-teal-500/20">{classification.codes.class_symbol}</span>
             </div>
           )}
-          {classification.codes.class_symbol && (
-            <div>
-              <span className="text-slate-500">Symbol Code:</span> {classification.codes.class_symbol}
+        </div>
+
+        {/* Sub-standards Justified list */}
+        <div className="flex flex-col gap-1.5 text-xs">
+          {classification.taxonomy_standard && (
+            <div className="flex justify-between items-center py-0.5">
+              <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Standard</span>
+              <span className="font-medium text-theme-text text-right">{classification.taxonomy_standard}</span>
             </div>
           )}
           {classification.wrb4_name && (
-            <div className="col-span-1 sm:col-span-2">
-              <span className="text-slate-500">WRB 2022 (4th Ed):</span> {classification.wrb4_name}
+            <div className="flex justify-between items-center py-0.5">
+              <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">WRB 2022 (4th Ed)</span>
+              <span className="font-medium text-theme-text text-right">{classification.wrb4_name}</span>
             </div>
           )}
           {classification.wrb2_name && (
-            <div className="col-span-1 sm:col-span-2">
-              <span className="text-slate-500">WRB 2006 (2nd Ed):</span> {classification.wrb2_name}
+            <div className="flex justify-between items-center py-0.5">
+              <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">WRB 2006 (2nd Ed)</span>
+              <span className="font-medium text-theme-text text-right">{classification.wrb2_name}</span>
             </div>
           )}
           {classification.fao90_name && (
-            <div className="col-span-1 sm:col-span-2">
-              <span className="text-slate-500">FAO 1990:</span> {classification.fao90_name}
+            <div className="flex justify-between items-center py-0.5">
+              <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">FAO 1990</span>
+              <span className="font-medium text-theme-text text-right">{classification.fao90_name}</span>
             </div>
           )}
           {classification.wrb_phase_name && (
-            <div className="col-span-1 sm:col-span-2">
-              <span className="text-slate-500">WRB Phase:</span> {classification.wrb_phase_name}
+            <div className="flex justify-between items-center py-0.5">
+              <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">WRB Phase</span>
+              <span className="font-medium text-theme-text text-right">{classification.wrb_phase_name}</span>
             </div>
           )}
         </div>
@@ -439,22 +591,25 @@ export const ClassificationCard: React.FC<ClassificationCardProps> = ({ profile 
 
       {/* Hydrology Section */}
       {hydro && (
-        <div className="flex flex-col gap-1.5 pt-2.5 border-t border-slate-800">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Hydrologic Context</span>
-          <div className="flex flex-col gap-1 text-xs text-slate-300">
+        <div className="flex flex-col gap-1.5 pt-2.5 border-t border-theme-border-sec">
+          <h3 className="text-[10px] text-theme-text-muted font-semibold uppercase tracking-wider mb-0.5">Hydrologic Context</h3>
+          <div className="flex flex-col gap-1.5 text-xs">
             {hydro.drainage_description && (
-              <div>
-                <span className="text-slate-500">Drainage Class:</span> {hydro.drainage_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Drainage Class</span>
+                <span className="font-medium text-theme-text text-right">{hydro.drainage_description}</span>
               </div>
             )}
             {hydro.water_regime_description && (
-              <div>
-                <span className="text-slate-500">Water Regime:</span> {hydro.water_regime_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Water Regime</span>
+                <span className="font-medium text-theme-text text-right">{hydro.water_regime_description}</span>
               </div>
             )}
             {hydro.impermeable_layer_description && (
-              <div>
-                <span className="text-slate-500">Impermeable Horizon:</span> {hydro.impermeable_layer_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Impermeable Horizon</span>
+                <span className="font-medium text-theme-text text-right">{hydro.impermeable_layer_description}</span>
               </div>
             )}
           </div>
@@ -463,32 +618,37 @@ export const ClassificationCard: React.FC<ClassificationCardProps> = ({ profile 
 
       {/* Land Limitations Section */}
       {limitations && (
-        <div className="flex flex-col gap-1.5 pt-2.5 border-t border-slate-800">
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Limiting Factors</span>
-          <div className="flex flex-col gap-1 text-xs text-slate-355">
+        <div className="flex flex-col gap-1.5 pt-2.5 border-t border-theme-border-sec">
+          <h3 className="text-[10px] text-theme-text-muted font-semibold uppercase tracking-wider mb-0.5">Limiting Factors</h3>
+          <div className="flex flex-col gap-1.5 text-xs">
             {limitations.root_depth_description && (
-              <div>
-                <span className="text-slate-500">Root Depth Limit:</span> {limitations.root_depth_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Root Depth Limit</span>
+                <span className="font-medium text-theme-text text-right">{limitations.root_depth_description}</span>
               </div>
             )}
             {limitations.root_obstacles_description && (
-              <div>
-                <span className="text-slate-500">Root Obstacles:</span> {limitations.root_obstacles_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Root Obstacles</span>
+                <span className="font-medium text-theme-text text-right">{limitations.root_obstacles_description}</span>
               </div>
             )}
             {limitations.phase1_description && (
-              <div>
-                <span className="text-slate-500">Phase 1 (Characteristics):</span> {limitations.phase1_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Phase 1</span>
+                <span className="font-medium text-theme-text text-right">{limitations.phase1_description}</span>
               </div>
             )}
             {limitations.phase2_description && (
-              <div>
-                <span className="text-slate-500">Phase 2 (Characteristics):</span> {limitations.phase2_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Phase 2</span>
+                <span className="font-medium text-theme-text text-right">{limitations.phase2_description}</span>
               </div>
             )}
             {limitations.additional_property_description && (
-              <div>
-                <span className="text-slate-500">Additional limitation:</span> {limitations.additional_property_description}
+              <div className="flex justify-between items-center py-0.5">
+                <span className="text-theme-text-muted text-[10px] uppercase font-medium tracking-wider">Additional limitation</span>
+                <span className="font-medium text-theme-text text-right">{limitations.additional_property_description}</span>
               </div>
             )}
           </div>
@@ -498,56 +658,4 @@ export const ClassificationCard: React.FC<ClassificationCardProps> = ({ profile 
   )
 }
 
-// 7. MetadataCard
-interface MetadataCardProps {
-  metadata: DatasetMetadata
-}
 
-export const MetadataCard: React.FC<MetadataCardProps> = ({ metadata }) => {
-  return (
-    <div className="border border-slate-800 bg-slate-900/30 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
-      <span className="text-xs font-semibold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-1.5">
-        Dataset & Observation Metadata
-      </span>
-      <div className="flex flex-col gap-2 text-xs text-slate-350">
-        {metadata.library && (
-          <div className="flex justify-between border-b border-slate-850/50 pb-1">
-            <span className="text-slate-500 font-medium">Library/Methodology:</span>
-            <span className="text-slate-300">{metadata.library}</span>
-          </div>
-        )}
-        {metadata.source && (
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-500 font-medium">Source Dataset:</span>
-            <span className="text-slate-300">{metadata.source}</span>
-          </div>
-        )}
-        {metadata.dataset_version && (
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-500 font-medium">Dataset Version:</span>
-            <span className="text-slate-300 font-mono">{metadata.dataset_version}</span>
-          </div>
-        )}
-        {metadata.codes?.coverage !== undefined && metadata.codes?.coverage !== null && (
-          <div className="flex justify-between border-b border-slate-855 pb-1">
-            <span className="text-slate-500 font-medium">Coverage Code:</span>
-            <span className="text-slate-300 font-mono">{metadata.codes.coverage}</span>
-          </div>
-        )}
-        {metadata.reference_identifiers && metadata.reference_identifiers.length > 0 && (
-          <div className="flex flex-col gap-1.5 pt-1.5">
-            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Spatial Identifiers</span>
-            <div className="grid grid-cols-2 gap-2 font-mono text-[11px] bg-slate-900/50 border border-slate-850 p-2 rounded">
-              {metadata.reference_identifiers.map(([key, val], idx) => (
-                <div key={idx} className="flex flex-col">
-                  <span className="text-slate-500 text-[9px] uppercase font-sans">{key}</span>
-                  <span className="text-teal-400 font-semibold">{val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}

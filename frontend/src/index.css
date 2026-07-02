@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+@theme {
+  --color-theme-bg: var(--bg-primary);
+  --color-theme-bg-sec: var(--bg-secondary);
+  --color-theme-panel: var(--bg-panel);
+  --color-theme-border: var(--border-primary);
+  --color-theme-border-sec: var(--border-secondary);
+  --color-theme-text: var(--text-primary);
+  --color-theme-text-sec: var(--text-secondary);
+  --color-theme-text-muted: var(--text-muted);
+  --color-theme-card: var(--card-bg);
+  --color-theme-card-border: var(--card-border);
+  --color-theme-btn-bg: var(--btn-inactive-bg);
+  --color-theme-btn-border: var(--btn-inactive-border);
+  --color-theme-btn-text: var(--btn-inactive-text);
+  
+  --color-slate-850: #1e293b;
+}
+
+:root {
+  --bg-primary: #f8fafc; /* Soft off-white */
+  --bg-secondary: #f1f5f9; /* Soft slate gray */
+  --bg-panel: rgba(255, 255, 255, 0.94); /* Gentle white transparency */
+  --border-primary: rgba(15, 23, 42, 0.06); /* Extremely subtle line */
+  --border-secondary: rgba(15, 23, 42, 0.03); /* Almost invisible divider */
+  --text-primary: #1e293b; /* Softer slate gray */
+  --text-secondary: #475569; /* Mild gray */
+  --text-muted: #64748b; /* Soft muted gray */
+  
+  /* Soft translucent card variables for subtle shadow boundaries */
+  --card-bg: rgba(15, 23, 42, 0.02);
+  --card-border: rgba(15, 23, 42, 0.05);
+  
+  --btn-inactive-bg: rgba(15, 23, 42, 0.03);
+  --btn-inactive-border: rgba(15, 23, 42, 0.06);
+  --btn-inactive-text: #475569;
+}
+
+.dark {
+  --bg-primary: #070a13; /* Deep navy */
+  --bg-secondary: #0b0f19; /* Navy-slate */
+  --bg-panel: rgba(11, 15, 25, 0.88); /* Translucent dark panel */
+  --border-primary: rgba(255, 255, 255, 0.06); /* Thin dark-mode line */
+  --border-secondary: rgba(255, 255, 255, 0.03);
+  --text-primary: #cbd5e1; /* Mild white-slate */
+  --text-secondary: #94a3b8; /* Muted gray-blue */
+  --text-muted: #64748b;
+  
+  /* Soft translucent card variables for subtle shadow boundaries */
+  --card-bg: rgba(255, 255, 255, 0.02);
+  --card-border: rgba(255, 255, 255, 0.05);
+  
+  --btn-inactive-bg: rgba(255, 255, 255, 0.03);
+  --btn-inactive-border: rgba(255, 255, 255, 0.06);
+  --btn-inactive-text: #94a3b8;
+}
+
 /* Base layout resets */
 html, body, #root {
   margin: 0;
@@ -9,11 +65,28 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Custom dark theme mappings matching design guidelines */
-.bg-slate-850 {
-  background-color: #1e293b;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.text-slate-450 {
-  color: #94a3b8;
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hover-float {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.hover-float:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+.dark .hover-float:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

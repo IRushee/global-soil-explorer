@@ -62,12 +62,49 @@ export class NominatimSearchProvider implements SearchProvider {
 }
 
 // Coordinate Parser Helper
-const parseCoordinates = (query: string): Coordinate | null => {
-  const clean = query.trim()
-  // Matches "latitude, longitude" or "latitude longitude"
-  const parts = clean.split(/[\s,]+/).map(p => parseFloat(p))
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-    const [lat, lon] = parts
+export const parseCoordinates = (query: string): Coordinate | null => {
+  const clean = query.trim().replace(/[°'"“”]/g, '') // remove degree/quote symbols
+  // Match decimal numbers optionally followed by N/S/E/W direction suffixes
+  const numRegex = /([+-]?\d+(?:\.\d+)?)\s*([NSnsEWew]?)/g
+  const matches = [...clean.matchAll(numRegex)]
+  
+  if (matches.length === 2) {
+    let latVal = parseFloat(matches[0][1])
+    const latDir = matches[0][2].toUpperCase()
+    let lonVal = parseFloat(matches[1][1])
+    const lonDir = matches[1][2].toUpperCase()
+    
+    // Apply sign depending on compass direction suffix
+    if (latDir === 'S') latVal = -Math.abs(latVal)
+    if (latDir === 'N') latVal = Math.abs(latVal)
+    if (lonDir === 'W') lonVal = -Math.abs(lonVal)
+    if (lonDir === 'E') lonVal = Math.abs(lonVal)
+    
+    // Check for prefix compass direction if no suffix was matched
+    if (!latDir) {
+      const matchPrefix = clean.match(/([NSns])\s*[+-]?\d+(?:\.\d+)?/)
+      if (matchPrefix) {
+        const prefix = matchPrefix[1].toUpperCase()
+        if (prefix === 'S') latVal = -Math.abs(latVal)
+      }
+    }
+    if (!lonDir) {
+      const matchPrefix = clean.match(/([EWew])\s*[+-]?\d+(?:\.\d+)?/)
+      if (matchPrefix) {
+        const prefix = matchPrefix[1].toUpperCase()
+        if (prefix === 'W') lonVal = -Math.abs(lonVal)
+      }
+    }
+    
+    // Latitude standard is [-90, 90], Longitude standard is [-180, 180].
+    // If the input was swapped (longitude first), auto-correct.
+    let lat = latVal
+    let lon = lonVal
+    if ((lat < -90 || lat > 90) && (lon >= -90 && lon <= 90)) {
+      lat = lonVal
+      lon = latVal
+    }
+    
     if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
       return { latitude: lat, longitude: lon }
     }
@@ -97,6 +134,7 @@ export const SearchBox: React.FC = () => {
     setActiveProfileIndex,
     setActiveLayerIndex,
     sidebarOpen,
+    setSidebarOpen,
   } = useGlobalStore()
 
   const provider = useRef(new NominatimSearchProvider())
@@ -206,6 +244,7 @@ export const SearchBox: React.FC = () => {
     addHistory({ latitude: lat, longitude: lon, name: item.label.replace(/^(Bookmark|History|Go to Coordinate): /, '') } as any)
 
     setInfoPanelOpen(true)
+    setSidebarOpen(false)
     setLoading(true)
     setError(null)
     try {
@@ -247,11 +286,11 @@ export const SearchBox: React.FC = () => {
     }
   }
 
-  const leftClass = sidebarOpen ? 'left-4' : 'left-[110px]'
+  const leftClass = sidebarOpen ? 'left-4' : 'left-16'
   return (
-    <div ref={dropdownRef} className={`absolute top-4 ${leftClass} z-20 w-80 font-sans`}>
-      <div className="relative flex items-center bg-slate-900/95 border border-slate-700 hover:border-slate-500 rounded-lg shadow-2xl transition-all">
-        <Search className="w-4 h-4 ml-3 text-slate-400 pointer-events-none" />
+    <div ref={dropdownRef} className={`absolute top-4 ${leftClass} z-20 w-80 font-sans transition-all duration-300`}>
+      <div className="relative flex items-center bg-theme-panel border border-theme-border hover:border-teal-500/35 rounded-xl shadow-md transition-all duration-300">
+        <Search className="w-4 h-4 ml-3 text-theme-text-muted pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -264,7 +303,7 @@ export const SearchBox: React.FC = () => {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="Search coordinates or places..."
-          className="w-full bg-transparent border-none outline-none px-2.5 py-2 text-xs text-slate-100 placeholder-slate-400"
+          className="w-full bg-transparent border-none outline-none px-3 py-2.5 text-xs text-theme-text placeholder-theme-text-muted"
         />
         {query && (
           <button
@@ -272,7 +311,7 @@ export const SearchBox: React.FC = () => {
               setQuery('')
               setSuggestions([])
             }}
-            className="p-1 mr-2 text-slate-400 hover:text-slate-200"
+            className="p-1 mr-2 text-theme-text-muted hover:text-theme-text cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -281,7 +320,7 @@ export const SearchBox: React.FC = () => {
 
       {/* Auto-suggest Dropdown */}
       {isOpen && (query.trim().length >= 2 || suggestions.length > 0) && (
-        <div className="absolute top-11 left-0 w-full bg-slate-900/95 border border-slate-800 rounded-lg shadow-2xl overflow-hidden z-30">
+        <div className="absolute top-11 left-0 w-full bg-theme-panel border border-theme-border rounded-xl shadow-lg overflow-hidden z-30 mt-1 animate-fadeIn">
           {suggestions.length > 0 ? (
             <ul className="max-h-60 overflow-y-auto">
               {suggestions.map((item, idx) => {
@@ -291,21 +330,21 @@ export const SearchBox: React.FC = () => {
                     key={item.id}
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setActiveIndex(idx)}
-                    className={`flex items-center gap-2.5 px-3 py-2 text-xs transition-colors cursor-pointer border-b border-slate-850/40 last:border-none ${
-                      isActive ? 'bg-teal-900/30 text-teal-400' : 'text-slate-300 hover:bg-slate-800/40 hover:text-slate-100'
+                    className={`flex items-center gap-2.5 px-3.5 py-2.5 text-xs transition-colors cursor-pointer border-b border-theme-border-sec last:border-none ${
+                      isActive ? 'bg-teal-500/10 text-teal-650 dark:text-teal-400 font-semibold border-l-2 border-teal-500' : 'text-theme-text-sec hover:bg-theme-btn-bg/50 hover:text-theme-text'
                     }`}
                   >
                     {item.category === 'coordinate' && <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                    {item.category === 'bookmark' && <BookmarkIcon className="w-3.5 h-3.5 text-teal-400 shrink-0" />}
-                    {item.category === 'history' && <History className="w-3.5 h-3.5 text-slate-500 shrink-0" />}
-                    {item.category === 'location' && <MapPin className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+                    {item.category === 'bookmark' && <BookmarkIcon className="w-3.5 h-3.5 text-teal-500 shrink-0" />}
+                    {item.category === 'history' && <History className="w-3.5 h-3.5 text-theme-text-muted shrink-0" />}
+                    {item.category === 'location' && <MapPin className="w-3.5 h-3.5 text-sky-500 shrink-0" />}
                     <span className="truncate">{item.label}</span>
                   </li>
                 )
               })}
             </ul>
           ) : (
-            <div className="p-3 text-[11px] text-slate-500 italic text-center">
+            <div className="p-3 text-[11px] text-theme-text-muted italic text-center">
               No results found. Type coordinates (e.g. 52.0, 10.0) or place names.
             </div>
           )}
@@ -356,13 +395,14 @@ export const NavigationControls: React.FC = () => {
     setInfoPanelOpen(false)
   }
 
-  const leftClass = sidebarOpen ? 'left-4' : 'left-[110px]'
+  const topOffset = sidebarOpen ? 'top-16' : 'top-28'
+
   return (
-    <div className={`absolute top-16 ${leftClass} z-20 flex flex-col gap-1.5 font-sans`}>
+    <div className={`absolute ${topOffset} left-4 z-20 flex flex-col gap-1.5 font-sans transition-all duration-300`}>
       {/* Zoom In */}
       <button
         onClick={handleZoomIn}
-        className="p-2 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 shadow-xl transition-all cursor-pointer"
+        className="p-2.5 rounded-xl bg-theme-panel backdrop-blur-md border border-theme-border hover:border-teal-500/35 text-theme-text hover:text-teal-650 dark:hover:text-teal-400 shadow-md transition-all cursor-pointer flex items-center justify-center h-10 w-10"
         title="Zoom In"
       >
         <Plus className="w-4 h-4" />
@@ -371,7 +411,7 @@ export const NavigationControls: React.FC = () => {
       {/* Zoom Out */}
       <button
         onClick={handleZoomOut}
-        className="p-2 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 shadow-xl transition-all cursor-pointer"
+        className="p-2.5 rounded-xl bg-theme-panel backdrop-blur-md border border-theme-border hover:border-teal-500/35 text-theme-text hover:text-teal-650 dark:hover:text-teal-400 shadow-md transition-all cursor-pointer flex items-center justify-center h-10 w-10"
         title="Zoom Out"
       >
         <Minus className="w-4 h-4" />
@@ -380,7 +420,7 @@ export const NavigationControls: React.FC = () => {
       {/* Reset View / Home */}
       <button
         onClick={handleHome}
-        className="p-2 rounded-lg bg-slate-900/90 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 shadow-xl transition-all cursor-pointer"
+        className="p-2.5 rounded-xl bg-theme-panel backdrop-blur-md border border-theme-border hover:border-teal-500/35 text-theme-text hover:text-teal-650 dark:hover:text-teal-400 shadow-md transition-all cursor-pointer flex items-center justify-center h-10 w-10"
         title="Reset Map to Home"
       >
         <Home className="w-4 h-4" />
@@ -471,13 +511,13 @@ export const BookmarksPanel: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 font-sans text-xs">
       {/* Bookmarks Section */}
-      <div className="border border-slate-800 bg-slate-900/40 p-4 rounded-lg flex flex-col gap-3">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-1.5">
-          <span className="font-semibold text-slate-200 uppercase tracking-wider text-[10px]">Saved Bookmarks</span>
+      <div className="border border-theme-border bg-theme-card p-4 rounded-xl flex flex-col gap-3">
+        <div className="flex justify-between items-center border-b border-theme-border-sec pb-1.5">
+          <span className="font-semibold text-theme-text uppercase tracking-wider text-[10px]">Saved Bookmarks</span>
           {selectedCoordinate && !isCurrentBookmarked && (
             <button
               onClick={handleSaveCurrent}
-              className="text-[10px] px-2 py-0.5 rounded bg-teal-950 text-teal-400 hover:bg-teal-900 border border-teal-900/50 font-medium transition-colors cursor-pointer"
+              className="text-[10px] px-2 py-0.5 rounded bg-teal-500/10 text-teal-650 dark:text-teal-400 hover:bg-teal-500/20 border border-teal-500/30 font-medium transition-colors cursor-pointer"
             >
               Save Current
             </button>
@@ -489,7 +529,7 @@ export const BookmarksPanel: React.FC = () => {
             {(bookmarks as Bookmark[]).map((b) => (
               <li
                 key={b.id}
-                className="flex items-center justify-between gap-2 p-1.5 rounded bg-slate-800/20 border border-slate-800/50 hover:border-slate-750"
+                className="flex items-center justify-between gap-2 p-1.5 rounded bg-theme-btn-bg/40 border border-theme-border hover:border-theme-border/80"
               >
                 {renamingId === b.id ? (
                   <div className="flex items-center gap-1 w-full">
@@ -497,11 +537,11 @@ export const BookmarksPanel: React.FC = () => {
                       type="text"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-100 outline-none"
+                      className="w-full bg-theme-bg border border-theme-border rounded px-1.5 py-0.5 text-xs text-theme-text outline-none"
                     />
                     <button
                       onClick={() => saveRename(b)}
-                      className="px-1.5 py-0.5 rounded bg-teal-900/50 text-teal-400 hover:bg-teal-900 border border-teal-800 text-[10px]"
+                      className="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-655 dark:text-teal-400 hover:bg-teal-500/20 border border-teal-500/30 text-[10px]"
                     >
                       Save
                     </button>
@@ -510,7 +550,7 @@ export const BookmarksPanel: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleNavigate(b, b.name)}
-                      className="text-left font-medium text-slate-300 hover:text-slate-100 truncate flex-1"
+                      className="text-left font-medium text-theme-text-sec hover:text-theme-text truncate flex-1"
                       title={b.name}
                     >
                       {b.name}
@@ -518,14 +558,14 @@ export const BookmarksPanel: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => startRenaming(b)}
-                        className="p-1 text-slate-500 hover:text-slate-350"
+                        className="p-1 text-theme-text-muted hover:text-theme-text"
                         title="Rename Bookmark"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => removeBookmark(b)}
-                        className="p-1 text-slate-500 hover:text-red-400"
+                        className="p-1 text-theme-text-muted hover:text-red-500"
                         title="Delete Bookmark"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -537,20 +577,20 @@ export const BookmarksPanel: React.FC = () => {
             ))}
           </ul>
         ) : (
-          <div className="text-slate-500 italic text-[11px] text-center p-2">
+          <div className="text-theme-text-muted italic text-[11px] text-center p-2">
             No bookmarks saved. Click a location on map to save it.
           </div>
         )}
       </div>
 
       {/* Recent History Section */}
-      <div className="border border-slate-800 bg-slate-900/40 p-4 rounded-lg flex flex-col gap-3">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-1.5">
-          <span className="font-semibold text-slate-200 uppercase tracking-wider text-[10px]">Recent Searches</span>
+      <div className="border border-theme-border bg-theme-card p-4 rounded-xl flex flex-col gap-3">
+        <div className="flex justify-between items-center border-b border-theme-border-sec pb-1.5">
+          <span className="font-semibold text-theme-text uppercase tracking-wider text-[10px]">Recent Searches</span>
           {history.length > 0 && (
             <button
               onClick={clearHistory}
-              className="text-[10px] text-slate-500 hover:text-slate-350 cursor-pointer"
+              className="text-[10px] text-theme-text-muted hover:text-theme-text cursor-pointer"
             >
               Clear
             </button>
@@ -562,18 +602,18 @@ export const BookmarksPanel: React.FC = () => {
             {history.map((h: any) => (
               <li
                 key={h.id}
-                className="flex items-center justify-between gap-2 p-1.5 rounded bg-slate-800/10 hover:bg-slate-800/25 cursor-pointer"
+                className="flex items-center justify-between gap-2 p-1.5 rounded bg-theme-btn-bg/30 hover:bg-theme-btn-bg/60 cursor-pointer"
                 onClick={() => handleNavigate(h, h.name)}
               >
-                <span className="truncate text-slate-350 hover:text-slate-200 flex-1">{h.name}</span>
-                <span className="text-[9px] font-mono text-slate-550 shrink-0">
+                <span className="truncate text-theme-text-sec hover:text-theme-text flex-1">{h.name}</span>
+                <span className="text-[9px] font-mono text-theme-text-muted shrink-0">
                   {h.latitude.toFixed(3)}, {h.longitude.toFixed(3)}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="text-slate-500 italic text-[11px] text-center p-2">
+          <div className="text-theme-text-muted italic text-[11px] text-center p-2">
             No recent search history.
           </div>
         )}

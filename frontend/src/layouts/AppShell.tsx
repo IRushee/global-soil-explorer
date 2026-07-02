@@ -12,10 +12,11 @@ import {
   ProfileSelector,
   LayerList,
   ScientificPropertyTable,
-  ClassificationCard,
-  MetadataCard
+  ClassificationCard
 } from '../components/ScientificPanelComponents'
 import { SearchBox, NavigationControls, BookmarksPanel } from '../components/SearchAndNavigation'
+import { LayerLegendPanel } from '../components/LayerLegendPanel'
+import { Layers, Info, Menu, Undo, Redo } from 'lucide-react'
 
 class SelectCoordinateCommand implements Command {
   id = 'SelectCoordinate'
@@ -57,6 +58,7 @@ export const AppShell: React.FC = () => {
     zoom,
     sidebarOpen,
     toggleSidebar,
+    setSidebarOpen,
     infoPanelOpen,
     setInfoPanelOpen,
     activeStudyArea,
@@ -170,6 +172,7 @@ export const AppShell: React.FC = () => {
             eventBus.dispatch('CoordinateSelected', selectedCoord)
             if (executeFetch) {
               setInfoPanelOpen(true)
+              setSidebarOpen(false)
               setLoading(true)
               setError(null)
               try {
@@ -287,6 +290,36 @@ export const AppShell: React.FC = () => {
     }
   }, [loading, isInitialized])
 
+  // Trigger map resize when sidebar or info panel open/close state changes
+  useEffect(() => {
+    if (isInitialized) {
+      mapRenderer.resize()
+      // Resize again after CSS transition duration (300ms) completes
+      const timer = setTimeout(() => {
+        mapRenderer.resize()
+      }, 310)
+      return () => clearTimeout(timer)
+    }
+  }, [sidebarOpen, infoPanelOpen, isInitialized])
+
+  // Synchronize thematic overlays to Map renderer
+  const overlays = useGlobalStore((state) => state.overlays)
+  useEffect(() => {
+    if (isInitialized) {
+      overlays.forEach((layer) => {
+        try {
+          mapRenderer.addLayer(layer)
+          mapRenderer.updateLayer(layer.id, {
+            visible: layer.visible,
+            opacity: layer.opacity,
+          })
+        } catch (err) {
+          logger.warn(`Failed to sync layer ${layer.id}:`, err)
+        }
+      })
+    }
+  }, [overlays, isInitialized])
+
   const handleStudyAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const areaId = e.target.value
     const area = studyAreaRegistry.get(areaId)
@@ -326,29 +359,73 @@ export const AppShell: React.FC = () => {
     // 1. Initial State (No coordinate selected)
     if (!selectedCoordinate) {
       return (
-        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
-          <p className="italic text-xs text-slate-500">
-            No active coordinate selected. Click the map to resolve coordinates.
-          </p>
+        <div className="flex-1 p-5 text-theme-text-sec text-xs flex flex-col gap-4 overflow-y-auto font-sans leading-relaxed select-none">
+          <div className="flex flex-col gap-1.5 pb-3 border-b border-theme-border">
+            <h3 className="text-sm font-bold text-theme-text bg-gradient-to-r from-teal-500 to-cyan-500 dark:from-teal-400 dark:to-cyan-400 bg-clip-text text-transparent">
+              Welcome to Global Soil Explorer
+            </h3>
+            <p className="text-[11px] text-theme-text-muted">
+              An open-source Web GIS platform for exploring soil datasets and scientific characteristics.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <span className="text-[10px] font-bold text-theme-text-muted uppercase tracking-wider">How to get started:</span>
+            
+            <div className="flex gap-2.5 items-start p-2.5 rounded-xl bg-theme-card border border-theme-border">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/30 font-bold font-mono text-[10px] shrink-0 mt-0.5">
+                1
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-semibold text-theme-text">Select a Location</span>
+                <span className="text-[11px] text-theme-text-sec">Click any point on the map, or use the search bar in the top-left to look up coordinates or place names.</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 items-start p-2.5 rounded-xl bg-theme-card border border-theme-border">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/30 font-bold font-mono text-[10px] shrink-0 mt-0.5">
+                2
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-semibold text-theme-text">View Soil Horizons</span>
+                <span className="text-[11px] text-theme-text-sec">Soil profiles are split into depth layers (horizons). Click a horizon card to reveal chemical and physical properties.</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 items-start p-2.5 rounded-xl bg-theme-card border border-theme-border">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/30 font-bold font-mono text-[10px] shrink-0 mt-0.5">
+                3
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-semibold text-theme-text">Explore Interactive Glossary</span>
+                <span className="text-[11px] text-theme-text-sec">Click on any soil measurement (like pH, Organic Carbon, or Base Saturation) in the properties table to view its definition.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 p-3 rounded-xl border border-theme-border bg-theme-btn-bg/35 text-[11px] text-theme-text-muted">
+            <span className="font-semibold text-theme-text block mb-1">💡 Pro-Tip</span>
+            You can change the active <strong className="text-theme-text">Study Area</strong> (e.g. Global vs. India Regional Grid), the <strong className="text-theme-text">Dataset</strong>, or the map <strong className="text-theme-text">Basemap</strong> using the header controls above.
+          </div>
         </div>
       )
     }
 
-    // 2. Loading State
-    if (loading) {
+    // 2. Loading State (Only block layout if we don't have any activeObservation yet)
+    if (loading && !activeObservation) {
       return (
-        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col items-center justify-center gap-4">
+        <div className="flex-1 p-6 text-theme-text-sec text-sm flex flex-col items-center justify-center gap-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
-          <p className="text-slate-400 font-medium">Loading soil profile...</p>
+          <p className="text-theme-text-sec font-medium">Loading soil profile...</p>
         </div>
       )
     }
 
-    // 3. Error State
-    if (error) {
+    // 3. Error State (Only block layout if we don't have any activeObservation yet)
+    if (error && !activeObservation) {
       return (
-        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
-          <div className="bg-red-950/40 border border-red-900/50 p-4 rounded-lg text-xs text-red-400">
+        <div className="flex-1 p-6 text-theme-text-sec text-sm flex flex-col gap-4 overflow-y-auto">
+          <div className="bg-red-950/20 border border-red-900/50 p-4 rounded-xl text-xs text-red-600 dark:text-red-400">
             <span className="font-semibold block mb-1">Query Failed:</span>
             {error}
           </div>
@@ -356,99 +433,104 @@ export const AppShell: React.FC = () => {
       )
     }
 
-    // 4. 204 No Content (Water/Ocean/Unmapped)
-    if (!activeObservation) {
+    // 4. 204 No Content (Water/Ocean/Unmapped) (Only block layout if we aren't loading, or if we have no activeObservation)
+    if (!activeObservation && !loading) {
       return (
-        <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
-          <p className="italic text-xs text-slate-500 leading-relaxed">
+        <div className="flex-1 p-6 text-theme-text-sec text-sm flex flex-col gap-4 overflow-y-auto">
+          <p className="italic text-xs text-theme-text-muted leading-relaxed">
             Water or Unmapped Land. No soil profile is available for this coordinate.
           </p>
         </div>
       )
     }
 
-    // 5. Success State
-    const profiles = activeObservation.profiles || []
+    // 5. Success State (Render the profile. If loading new point, show subtle indicator)
+    const obs = activeObservation || { profiles: [] }
+    const profiles = obs.profiles || []
     const activeProfile = profiles[activeProfileIndex] || profiles[0]
 
     return (
-      <div className="flex-1 p-5 text-slate-400 text-sm flex flex-col gap-5 overflow-y-auto select-none">
-        {/* Observation Summary Card */}
-        <ObservationSummary
-          observation={activeObservation}
-          selectedCoordinate={selectedCoordinate}
-          datasetId={activeDatasetId}
-        />
+      <div className="flex-1 p-5 text-theme-text-sec text-sm flex flex-col gap-5 overflow-y-auto select-none relative">
+        {/* Subtle top progress bar indicating a background reload/update is in progress */}
+        {loading && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-theme-btn-bg overflow-hidden z-20">
+            <div className="h-full bg-teal-500 animate-pulse w-full duration-1000" style={{ animationDuration: '1.5s' }} />
+          </div>
+        )}
+
+        {/* Reload Error alert */}
+        {error && activeObservation && (
+          <div className="bg-red-950/20 border border-red-900/50 p-3 rounded-xl text-xs text-red-650 dark:text-red-400">
+            <span className="font-semibold block">Reload Failed:</span> {error}
+          </div>
+        )}
+
+        {/* Observation Summary Card (Now merged with metadata card fields) */}
+        {activeObservation && (
+          <ObservationSummary
+            observation={activeObservation}
+            selectedCoordinate={selectedCoordinate}
+            datasetId={activeDatasetId}
+          />
+        )}
 
         {/* Profile Selector for multiple profiles */}
-        <ProfileSelector
-          profiles={profiles}
-          activeIndex={activeProfileIndex}
-          onChange={(idx) => {
-            setActiveProfileIndex(idx)
-            setActiveLayerIndex(null) // Reset active layer selection on profile switch
-          }}
-        />
+        {profiles.length > 0 && (
+          <ProfileSelector
+            profiles={profiles}
+            activeIndex={activeProfileIndex}
+            onChange={(idx) => {
+              setActiveProfileIndex(idx)
+              setActiveLayerIndex(null) // Reset active layer selection on profile switch
+            }}
+          />
+        )}
 
         {activeProfile ? (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-6">
             {/* Classification & Context Card */}
             <ClassificationCard profile={activeProfile} />
 
-            {/* Layer List Card */}
+            {/* Layer List Card (Now embeds properties table inline for the active horizon) */}
             <LayerList
               layers={activeProfile.layers || []}
               activeLayerIndex={activeLayerIndex}
-              onLayerSelect={(idx) => {
+              onLayerSelect={(idx: number | null) => {
                 setActiveLayerIndex(idx)
               }}
             />
-
-            {/* Scientific Properties Table (Only visible when a layer is active) */}
-            {activeLayerIndex !== null && activeProfile.layers?.[activeLayerIndex] ? (
-              <ScientificPropertyTable layer={activeProfile.layers[activeLayerIndex]} />
-            ) : (
-              <div className="text-center text-xs text-slate-500 italic border border-dashed border-slate-800 p-4 rounded-lg">
-                Click a layer card above to view detailed scientific measurements.
-              </div>
-            )}
           </div>
         ) : (
-          <div className="text-xs text-slate-550 italic">No profile data available.</div>
-        )}
-
-        {/* Metadata Card */}
-        {activeObservation.metadata && (
-          <MetadataCard metadata={activeObservation.metadata} />
+          !loading && <div className="text-xs text-theme-text-muted italic">No profile data available.</div>
         )}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-900 text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-screen bg-theme-bg text-theme-text overflow-hidden font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-slate-850 border-b border-slate-800 z-10 shadow-md">
+      <header className="flex items-center justify-between px-6 py-3 bg-theme-panel backdrop-blur-md border-b border-theme-border z-10 shadow-sm select-none">
         <div className="flex items-center gap-3">
-          <span className="text-xl font-bold bg-gradient-to-r from-teal-400 to-cyan-500 bg-clip-text text-transparent">
+          <h1 className="text-lg font-bold bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 dark:from-teal-400 dark:via-cyan-400 dark:to-sky-400 bg-clip-text text-transparent tracking-tight">
             Global Soil Explorer
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono">
+          </h1>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-theme-btn-bg text-theme-btn-text border border-theme-btn-border font-mono font-medium">
             V1.0
           </span>
         </div>
 
         <div className="flex items-center gap-4">
           {/* Study Area Dropdown */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400">Study Area:</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-theme-text-muted font-medium">Study Area:</span>
             <select
               value={activeStudyArea.id}
               onChange={handleStudyAreaChange}
-              className="bg-slate-800 border border-slate-700 px-3 py-1 rounded text-slate-200 outline-none focus:border-teal-500 transition-colors"
+              className="w-44 bg-theme-btn-bg border border-theme-btn-border hover:border-teal-500/30 px-3 py-1.5 rounded-lg text-theme-text text-xs outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer backdrop-blur-sm"
             >
               {studyAreaRegistry.list().map((id) => (
-                <option key={id} value={id}>
+                <option key={id} value={id} className="bg-theme-bg text-theme-text">
                   {studyAreaRegistry.get(id).name}
                 </option>
               ))}
@@ -456,15 +538,15 @@ export const AppShell: React.FC = () => {
           </div>
 
           {/* Dataset Dropdown */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400">Dataset:</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-theme-text-muted font-medium">Dataset:</span>
             <select
               value={activeDatasetId}
               onChange={handleDatasetChange}
-              className="bg-slate-800 border border-slate-700 px-3 py-1 rounded text-slate-200 outline-none focus:border-teal-500 transition-colors"
+              className="w-28 bg-theme-btn-bg border border-theme-btn-border hover:border-teal-500/30 px-3 py-1.5 rounded-lg text-theme-text text-xs outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer backdrop-blur-sm"
             >
               {activeStudyArea.availableDatasets.map((ds) => (
-                <option key={ds} value={ds}>
+                <option key={ds} value={ds} className="bg-theme-bg text-theme-text">
                   {ds.toUpperCase()}
                 </option>
               ))}
@@ -472,15 +554,15 @@ export const AppShell: React.FC = () => {
           </div>
 
           {/* Basemap Dropdown */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400">Basemap:</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-theme-text-muted font-medium">Basemap:</span>
             <select
               value={basemap}
               onChange={handleBasemapChange}
-              className="bg-slate-800 border border-slate-700 px-3 py-1 rounded text-slate-200 outline-none focus:border-teal-500 transition-colors"
+              className="w-28 bg-theme-btn-bg border border-theme-btn-border hover:border-teal-500/30 px-3 py-1.5 rounded-lg text-theme-text text-xs outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer backdrop-blur-sm"
             >
               {activeStudyArea.availableBasemaps.map((bm) => (
-                <option key={bm} value={bm}>
+                <option key={bm} value={bm} className="bg-theme-bg text-theme-text">
                   {bm.charAt(0).toUpperCase() + bm.slice(1)}
                 </option>
               ))}
@@ -493,40 +575,40 @@ export const AppShell: React.FC = () => {
       <div className="flex flex-1 relative overflow-hidden">
         {/* Sidebar */}
         <aside
-          className={`flex flex-col border-r border-slate-800 bg-slate-850 z-10 transition-all duration-300 ${
+          className={`flex flex-col border-r border-theme-border bg-theme-panel backdrop-blur-md z-10 transition-all duration-300 ${
             sidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-none'
           }`}
         >
-          <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-            <span className="font-semibold text-slate-200">Layer Manager</span>
+          <div className="p-4 border-b border-theme-border flex items-center relative select-none bg-theme-btn-bg/10 h-14">
+            {/* Centered Title */}
+            <h2 className="absolute inset-0 flex items-center justify-center font-bold text-theme-text tracking-wider text-[11px] uppercase pointer-events-none">
+              Layer Manager
+            </h2>
+            {/* Collapse hamburger button on the right */}
             <button
               onClick={toggleSidebar}
-              className="text-xs px-2 py-1 rounded bg-slate-750 hover:bg-slate-700 transition-colors text-slate-400"
+              className="ml-auto p-1.5 rounded-lg hover:bg-theme-btn-bg/85 text-theme-text-muted hover:text-theme-text transition-all cursor-pointer z-10"
+              title="Collapse Sidebar"
             >
-              Collapse
+              <Menu className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex-1 p-6 text-slate-400 text-sm flex flex-col gap-4 overflow-y-auto">
-            <p>Layer controls placeholder. No thematic overlays active.</p>
-            <div className="border border-slate-800 bg-slate-900/50 p-4 rounded text-xs leading-relaxed mb-2">
-              <span className="text-slate-200 block mb-1 font-semibold">Active Capabilities:</span>
-              <ul className="list-disc pl-4 space-y-1 text-slate-400">
-                <li>Profiles: {activeStudyArea.capabilities.supportsProfiles ? 'YES' : 'NO'}</li>
-                <li>Hydrology: {activeStudyArea.capabilities.supportsHydrology ? 'YES' : 'NO'}</li>
-                <li>Offline: {activeStudyArea.capabilities.supportsOffline ? 'YES' : 'NO'}</li>
-              </ul>
-            </div>
+          <div className="flex-1 p-6 text-theme-text-sec text-sm flex flex-col gap-4 overflow-y-auto">
+            <LayerLegendPanel />
             <BookmarksPanel />
           </div>
         </aside>
 
-        <main className="flex-1 h-full w-full relative bg-slate-950">
+        <main className="flex-1 h-full w-full relative bg-theme-bg-sec">
+          {/* Floating toggle layer sidebar button */}
           {!sidebarOpen && (
             <button
               onClick={toggleSidebar}
-              className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 shadow-lg cursor-pointer"
+              className="absolute top-4 left-4 z-20 px-3.5 py-2 rounded-xl bg-theme-panel border border-theme-border text-xs font-semibold text-theme-text-sec hover:text-teal-650 dark:hover:text-teal-400 shadow-md hover:border-teal-500/35 transition-all cursor-pointer flex items-center gap-2 h-10"
+              title="Open Layer Manager"
             >
-              Open Layers
+              <Layers className="w-4 h-4 text-teal-500" />
+              <span>Layers</span>
             </button>
           )}
 
@@ -542,36 +624,45 @@ export const AppShell: React.FC = () => {
           {/* Map zoom and home navigation controls */}
           <NavigationControls />
 
-          {/* Info toggle trigger simulator */}
-          <button
-            onClick={() => setInfoPanelOpen(!infoPanelOpen)}
-            className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 shadow-lg cursor-pointer"
-          >
-            {infoPanelOpen ? 'Hide Scientific Info' : 'Show Scientific Info'}
-          </button>
+          {/* Floating toggle scientific panel button */}
+          {!infoPanelOpen && (
+            <button
+              onClick={() => setInfoPanelOpen(true)}
+              className="absolute top-4 right-4 z-20 px-3.5 py-2 rounded-xl bg-theme-panel border border-theme-border text-xs font-semibold text-theme-text-sec hover:text-teal-650 dark:hover:text-teal-400 shadow-md hover:border-teal-500/35 transition-all cursor-pointer flex items-center gap-2 h-10"
+              title="Show Scientific Info"
+            >
+              <Info className="w-4 h-4 text-teal-500" />
+              <span>Profile</span>
+            </button>
+          )}
         </main>
 
         {/* Information Panel */}
         <aside
-          className={`flex flex-col border-l border-slate-800 bg-slate-850 z-10 transition-all duration-300 ${
+          className={`flex flex-col border-l border-theme-border bg-theme-panel backdrop-blur-md z-10 transition-all duration-300 ${
             infoPanelOpen ? 'w-96' : 'w-0 overflow-hidden border-none'
           }`}
         >
-          <div className="p-4 border-b border-slate-800 flex justify-between items-center select-none">
-            <span className="font-semibold text-slate-200">Scientific Profile</span>
+          <div className="p-4 border-b border-theme-border flex items-center relative select-none bg-theme-btn-bg/10 h-14">
+            {/* Collapse hamburger button on the left */}
             <button
               onClick={() => setInfoPanelOpen(false)}
-              className="text-xs px-2 py-1 rounded bg-slate-750 hover:bg-slate-700 transition-colors text-slate-400"
+              className="p-1.5 rounded-lg hover:bg-theme-btn-bg/85 text-theme-text-muted hover:text-theme-text transition-all cursor-pointer z-10"
+              title="Collapse Scientific Profile"
             >
-              Close
+              <Menu className="w-4 h-4" />
             </button>
+            {/* Centered Title */}
+            <h2 className="absolute inset-0 flex items-center justify-center font-bold text-theme-text tracking-wider text-[11px] uppercase pointer-events-none">
+              Scientific Profile
+            </h2>
           </div>
           {renderScientificProfile()}
         </aside>
       </div>
 
       {/* Status Bar */}
-      <footer className="flex items-center justify-between px-6 py-2 bg-slate-900 border-t border-slate-800 text-xs text-slate-450 select-none z-10 font-mono">
+      <footer className="flex items-center justify-between px-6 py-2.5 bg-theme-bg-sec border-t border-theme-border text-xs text-theme-text-muted select-none z-10 font-mono">
         <div className="flex items-center gap-4">
           <span>Map Engine: {isInitialized ? 'ONLINE' : 'BOOTING'}</span>
           <span>Center: {center[0].toFixed(4)}°E, {center[1].toFixed(4)}°N</span>
@@ -580,7 +671,7 @@ export const AppShell: React.FC = () => {
           )}
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 mr-4 border-r border-slate-800 pr-4">
+          <div className="flex items-center gap-1.5 mr-4 border-r border-theme-border pr-4">
             <button
               onClick={() => {
                 try {
@@ -589,10 +680,10 @@ export const AppShell: React.FC = () => {
                   logger.error('Undo error:', e)
                 }
               }}
-              className="px-2 py-0.5 rounded bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-350 transition-colors cursor-pointer"
+              className="p-1 rounded-lg bg-theme-btn-bg hover:bg-theme-btn-bg/85 border border-theme-btn-border text-theme-text hover:text-teal-650 dark:hover:text-teal-400 transition-colors cursor-pointer flex items-center justify-center"
               title="Undo last selection"
             >
-              Undo
+              <Undo className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => {
@@ -602,15 +693,15 @@ export const AppShell: React.FC = () => {
                   logger.error('Redo error:', e)
                 }
               }}
-              className="px-2 py-0.5 rounded bg-slate-850 hover:bg-slate-800 border border-slate-750 text-slate-350 transition-colors cursor-pointer"
+              className="p-1 rounded-lg bg-theme-btn-bg hover:bg-theme-btn-bg/85 border border-theme-btn-border text-theme-text hover:text-teal-650 dark:hover:text-teal-400 transition-colors cursor-pointer flex items-center justify-center"
               title="Redo last selection"
             >
-              Redo
+              <Redo className="w-3.5 h-3.5" />
             </button>
           </div>
           <span>Projection: {activeStudyArea.projection}</span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
             API Connected
           </span>
         </div>

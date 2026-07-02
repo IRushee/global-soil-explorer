@@ -118,8 +118,8 @@ export const useGlobalStore = create<GlobalStoreState>((set) => ({
   setActiveLayerIndex: (activeLayerIndex) => set({ activeLayerIndex }),
 
   // LayoutSlice
-  sidebarOpen: true,
-  infoPanelOpen: false,
+  sidebarOpen: false,
+  infoPanelOpen: true,
   activePanelTab: 'summary',
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),

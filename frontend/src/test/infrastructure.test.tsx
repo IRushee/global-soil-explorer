@@ -76,8 +76,8 @@ describe('Global Soil Explorer Infrastructure Tests', () => {
   // 5. Global Store (Zustand)
   test('Zustand store initializes layout and selection parameters with defaults', () => {
     const state = useGlobalStore.getState()
-    expect(state.sidebarOpen).toBe(true)
-    expect(state.infoPanelOpen).toBe(false)
+    expect(state.sidebarOpen).toBe(false)
+    expect(state.infoPanelOpen).toBe(true)
     expect(state.selectedCoordinate).toBeNull()
     expect(state.activeObservation).toBeNull()
   })
@@ -110,7 +110,7 @@ describe('Global Soil Explorer Infrastructure Tests', () => {
   test('AppProvider renders AppShell container layout without crashing', () => {
     const { container } = render(<AppProvider />)
     expect(container).toBeDefined()
-    expect(screen.getByText(/Global Soil Explorer/i)).toBeDefined()
+    expect(screen.getAllByText(/Global Soil Explorer/i).length).toBeGreaterThanOrEqual(1)
   })
 
   // 8. SelectCoordinateCommand and Event Bus integration
@@ -216,5 +216,30 @@ describe('Global Soil Explorer Infrastructure Tests', () => {
     expect(results[0].coordinate.lon).toBe(77.2090)
 
     fetchSpy.mockRestore()
+  })
+
+  // 11. Coordinate Parser Edge Cases
+  test('parseCoordinates robustly parses various coordinate inputs and auto-corrects swapped orders', async () => {
+    const { parseCoordinates } = await import('../components/SearchAndNavigation')
+
+    // Simple decimals
+    expect(parseCoordinates('45.12, -122.34')).toEqual({ latitude: 45.12, longitude: -122.34 })
+    expect(parseCoordinates('  45.12   -122.34  ')).toEqual({ latitude: 45.12, longitude: -122.34 })
+
+    // Decimals with degree signs and directions
+    expect(parseCoordinates('45.12° N, 122.34° W')).toEqual({ latitude: 45.12, longitude: -122.34 })
+    expect(parseCoordinates('45.12N 122.34W')).toEqual({ latitude: 45.12, longitude: -122.34 })
+    expect(parseCoordinates('S 34.56, E 18.92')).toEqual({ latitude: -34.56, longitude: 18.92 })
+
+    // Auto-swapped lat/lon (e.g. lon first)
+    // -122.34 is invalid latitude, but valid longitude. 45.12 is valid latitude.
+    // The parser should auto-correct and swap them.
+    expect(parseCoordinates('-122.34, 45.12')).toEqual({ latitude: 45.12, longitude: -122.34 })
+
+    // Out of bounds / invalid inputs
+    expect(parseCoordinates('95.0, -122.34')).toBeNull() // invalid latitude
+    expect(parseCoordinates('45.12, -185.0')).toBeNull() // invalid longitude
+    expect(parseCoordinates('not a coordinate')).toBeNull()
+    expect(parseCoordinates('45.12')).toBeNull() // only one number
   })
 })

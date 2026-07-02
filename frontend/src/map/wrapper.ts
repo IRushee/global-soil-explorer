@@ -199,17 +199,99 @@ export class MapLibreRenderer implements MapRenderer {
       return
     }
     logger.info(`Adding layer: ${layer.id} (${layer.type})`)
-    // TODO: Implement core layer rendering.
+    try {
+      const sourceId = `src-${layer.id}`
+      if (!this.mapInstance.getSource(sourceId)) {
+        if (layer.type === 'raster') {
+          this.mapInstance.addSource(sourceId, {
+            type: 'raster',
+            tiles: [layer.sourceUrl],
+            tileSize: 256
+          })
+        } else {
+          this.mapInstance.addSource(sourceId, {
+            type: 'vector',
+            tiles: [layer.sourceUrl]
+          })
+        }
+      }
+
+      if (!this.mapInstance.getLayer(layer.id)) {
+        if (layer.type === 'raster') {
+          this.mapInstance.addLayer({
+            id: layer.id,
+            type: 'raster',
+            source: sourceId,
+            layout: {
+              visibility: layer.visible ? 'visible' : 'none'
+            },
+            paint: {
+              'raster-opacity': layer.opacity
+            }
+          })
+        } else {
+          this.mapInstance.addLayer({
+            id: layer.id,
+            type: 'fill',
+            source: sourceId,
+            'source-layer': 'soil',
+            layout: {
+              visibility: layer.visible ? 'visible' : 'none'
+            },
+            paint: {
+              'fill-opacity': layer.opacity,
+              'fill-color': layer.legend?.colors?.[0] || '#06b6d4'
+            }
+          })
+        }
+      }
+    } catch (err) {
+      logger.warn(`Headless or rendering error adding layer ${layer.id}:`, err)
+    }
   }
 
   updateLayer(layerId: string, updates: Partial<OverlayLayer>): void {
     if (!this.mapInstance) return
     logger.info(`Updating layer: ${layerId}`, updates)
+    try {
+      if (this.mapInstance.getLayer(layerId)) {
+        if (updates.visible !== undefined) {
+          this.mapInstance.setLayoutProperty(
+            layerId,
+            'visibility',
+            updates.visible ? 'visible' : 'none'
+          )
+        }
+        if (updates.opacity !== undefined) {
+          const l = this.mapInstance.getLayer(layerId)
+          if (l) {
+            if (l.type === 'raster') {
+              this.mapInstance.setPaintProperty(layerId, 'raster-opacity', updates.opacity)
+            } else {
+              this.mapInstance.setPaintProperty(layerId, 'fill-opacity', updates.opacity)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn(`Headless or rendering error updating layer ${layerId}:`, err)
+    }
   }
 
   removeLayer(layerId: string): void {
     if (!this.mapInstance) return
     logger.info(`Removing layer: ${layerId}`)
+    try {
+      if (this.mapInstance.getLayer(layerId)) {
+        this.mapInstance.removeLayer(layerId)
+      }
+      const sourceId = `src-${layerId}`
+      if (this.mapInstance.getSource(sourceId)) {
+        this.mapInstance.removeSource(sourceId)
+      }
+    } catch (err) {
+      logger.warn(`Headless or rendering error removing layer ${layerId}:`, err)
+    }
   }
 
   on(event: 'click' | 'zoomend' | 'moveend' | 'mousemove', handler: (e: any) => void): void {
@@ -252,6 +334,12 @@ export class MapLibreRenderer implements MapRenderer {
       logger.info('Destroying MapLibre GL Map instance')
       this.mapInstance.remove()
       this.mapInstance = null
+    }
+  }
+
+  resize(): void {
+    if (this.mapInstance) {
+      this.mapInstance.resize()
     }
   }
 }
